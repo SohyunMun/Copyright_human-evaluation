@@ -3,10 +3,8 @@ import axios from "axios";
 import "./App.css";
 
 function App() {
-  const [annotator, setAnnotator] = useState(null); // 선택형
-  const [scores, setScores] = useState({
-    q1: null
-  });
+  const [annotator, setAnnotator] = useState(null);
+  const [scores, setScores] = useState({ q1: null });
   const [label, setLabel] = useState("");
 
   const [sample, setSample] = useState(null);
@@ -16,16 +14,7 @@ function App() {
   const [currentStep, setCurrentStep] = useState(1);
   const [total, setTotal] = useState(1);
 
-  const defaultSample = {
-    sample_id: "TEST_001",
-    article_id: "TEST",
-    previous: "이전 문장입니다.",
-    target: "이 문장이 평가 대상입니다.",
-    next: "다음 문장입니다.",
-    predicted: "M"
-  };
-
-  const current = sample || defaultSample;
+  const current = sample;
 
   useEffect(() => {
     fetchSample();
@@ -33,31 +22,59 @@ function App() {
     fetchIAA();
   }, []);
 
+  // 샘플 + annotation 로드 함수
+  const loadAnnotation = async (sampleData) => {
+    if (annotator) {
+      try {
+        const ann = await axios.get(
+          `http://127.0.0.1:8000/annotation/${sampleData.sample_id}/${annotator}`
+        );
+
+        setScores({ q1: ann.data.q1 });
+        setLabel(ann.data.final_label || "");
+      } catch {
+        resetState();
+      }
+    } else {
+      resetState();
+    }
+  };
+
   const fetchSample = async () => {
     const res = await axios.get("http://127.0.0.1:8000/sample");
-    setSample(res.data);
-    setCurrentStep(res.data.current_index);
-    setTotal(res.data.total);
+    const data = res.data;
+
+    setSample(data);
+    setCurrentStep(data.current_index);
+    setTotal(data.total);
+
+    await loadAnnotation(data);
   };
 
   const nextSample = async () => {
     if (currentStep === total) return;
 
     const res = await axios.get("http://127.0.0.1:8000/next");
-    setSample(res.data);
-    setCurrentStep(res.data.current_index);
-    setTotal(res.data.total);
-    resetState();
+    const data = res.data;
+
+    setSample(data);
+    setCurrentStep(data.current_index);
+    setTotal(data.total);
+
+    await loadAnnotation(data);
   };
 
   const prevSample = async () => {
     if (currentStep === 1) return;
 
     const res = await axios.get("http://127.0.0.1:8000/prev");
-    setSample(res.data);
-    setCurrentStep(res.data.current_index);
-    setTotal(res.data.total);
-    resetState();
+    const data = res.data;
+
+    setSample(data);
+    setCurrentStep(data.current_index);
+    setTotal(data.total);
+
+    await loadAnnotation(data);
   };
 
   const fetchProgress = async () => {
@@ -80,38 +97,39 @@ function App() {
   };
 
   const submit = async () => {
-  if (!annotator) {
-    alert("Annotator를 선택하세요");
-    return;
-  }
+    if (!annotator) {
+      alert("Annotator를 선택하세요");
+      return;
+    }
 
-  if (scores.q1 === null || label === "") {
-    alert("모든 문항(*)을 입력해야 합니다");
-    return;
-  }
+    if (scores.q1 === null || label === "") {
+      alert("모든 문항(*)을 입력해야 합니다");
+      return;
+    }
 
-  if (currentStep === total) {
-  alert("모든 문항을 완료했습니다!");
-  }
+    if (currentStep === total) {
+      alert("모든 문항을 완료했습니다!");
+    }
 
-  try {
-    await axios.post("http://127.0.0.1:8000/submit", {
-      sample_id: current.sample_id,
-      annotator,
-      q1: scores.q1,
-      final_label: label
-    });
+    try {
+      await axios.post("http://127.0.0.1:8000/submit", {
+        sample_id: current.sample_id,
+        annotator,
+        q1: scores.q1,
+        final_label: label
+      });
 
-    // alert 제거
-    fetchProgress();
-    fetchIAA();
-    nextSample();
+      fetchProgress();
+      fetchIAA();
 
-  } catch (err) {
-    console.error(err);
-    alert("제출 실패");
-  }
-};
+      // 저장 후 현재 값 유지 + 다음으로 이동
+      nextSample();
+
+    } catch (err) {
+      console.error(err);
+      alert("제출 실패");
+    }
+  };
 
   const renderRadios = (q) =>
     [1,2,3,4,5].map(n => (
@@ -125,6 +143,8 @@ function App() {
       </label>
     ));
 
+  if (!current) return null;
+
   return (
     <div className="container">
 
@@ -136,14 +156,14 @@ function App() {
           <div className="progress-container">
             <div className="progress-bar">
               <div
-              className="progress-fill"
-              style={{
-              width: `${total ? (currentStep / total) * 100 : 0}%`
-              }}
+                className="progress-fill"
+                style={{
+                  width: `${total ? (currentStep / total) * 100 : 0}%`
+                }}
               />
             </div>
             <span className="progress-text">
-            {progress.done} / {progress.total}
+              {progress.done} / {progress.total}
             </span>
           </div>
 
@@ -168,61 +188,60 @@ function App() {
           </div>
 
           <p className="label">Previous Sentence</p>
-          <p>{current.previous}</p>
+          <p>{current.previous || "이전 문장이 없습니다."}</p>
 
           <p className="label">Target Sentence</p>
           <p className="target">{current.target}</p>
 
           <p className="label">Next Sentence</p>
-          <p>{current.next}</p>
+          <p>{current.next || "다음 문장이 없습니다."}</p>
         </div>
 
         {/* RIGHT */}
         <div className="card">
           <h2>Evaluation</h2>
 
-          {/* 👤 Annotator 선택 */}
           <div className="question">
-          <p>
-          Annotator
-          <span className="required">*</span>
-          </p>
+            <p>
+              Annotator
+              <span className="required">*</span>
+            </p>
 
-          <div className="annotator-group">
-          {["A", "B", "C"].map(a => (
-          <button
-          key={a}
-          onClick={() => setAnnotator(a)}
-          className={annotator === a ? "selected" : ""}
-          >
-          Annotator {a}
-          </button>
-          ))}
+            <div className="annotator-group">
+              {["A", "B", "C"].map(a => (
+                <button
+                  key={a}
+                  onClick={() => setAnnotator(a)}
+                  className={annotator === a ? "selected" : ""}
+                >
+                  Annotator {a}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
           <div className="question">
             <p>
-            Q. LLM이 부여한 라벨이 적절한가?
-            <span className="required">*</span>
+              Q. LLM이 부여한 라벨이 적절한가?
+              <span className="required">*</span>
             </p>
             {renderRadios("q1")}
           </div>
 
           <div className="question">
             <p>
-            Final Label
-            <span className="required">*</span>
+              Final Label
+              <span className="required">*</span>
             </p>
             <div className="label-group">
               {["F", "C", "M", "Unsure"].map(l => (
-              <button
-              key={l}
-              onClick={() => setLabel(l)}
-              className={`label-btn ${label === l ? "active" : ""}`}
-              >
-              {l}
-              </button>
+                <button
+                  key={l}
+                  onClick={() => setLabel(l)}
+                  className={`label-btn ${label === l ? "active" : ""}`}
+                >
+                  {l}
+                </button>
               ))}
             </div>
           </div>
