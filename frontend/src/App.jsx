@@ -1,121 +1,240 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useEffect } from "react";
+import axios from "axios";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [annotator, setAnnotator] = useState(null); // 선택형
+  const [scores, setScores] = useState({
+    q1: null
+  });
+  const [label, setLabel] = useState("");
+
+  const [sample, setSample] = useState(null);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [iaa, setIAA] = useState(null);
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const [total, setTotal] = useState(1);
+
+  const defaultSample = {
+    sample_id: "TEST_001",
+    article_id: "TEST",
+    previous: "이전 문장입니다.",
+    target: "이 문장이 평가 대상입니다.",
+    next: "다음 문장입니다.",
+    predicted: "M"
+  };
+
+  const current = sample || defaultSample;
+
+  useEffect(() => {
+    fetchSample();
+    fetchProgress();
+    fetchIAA();
+  }, []);
+
+  const fetchSample = async () => {
+    const res = await axios.get("http://127.0.0.1:8000/sample");
+    setSample(res.data);
+    setCurrentStep(res.data.current_index);
+    setTotal(res.data.total);
+  };
+
+  const nextSample = async () => {
+    if (currentStep === total) return;
+
+    const res = await axios.get("http://127.0.0.1:8000/next");
+    setSample(res.data);
+    setCurrentStep(res.data.current_index);
+    setTotal(res.data.total);
+    resetState();
+  };
+
+  const prevSample = async () => {
+    if (currentStep === 1) return;
+
+    const res = await axios.get("http://127.0.0.1:8000/prev");
+    setSample(res.data);
+    setCurrentStep(res.data.current_index);
+    setTotal(res.data.total);
+    resetState();
+  };
+
+  const fetchProgress = async () => {
+    const res = await axios.get("http://127.0.0.1:8000/progress");
+    setProgress(res.data);
+  };
+
+  const fetchIAA = async () => {
+    const res = await axios.get("http://127.0.0.1:8000/iaa");
+    setIAA(res.data.kappa);
+  };
+
+  const resetState = () => {
+    setScores({ q1: null });
+    setLabel("");
+  };
+
+  const setScore = (key, value) => {
+    setScores({ ...scores, [key]: value });
+  };
+
+  const submit = async () => {
+  if (!annotator) {
+    alert("Annotator를 선택하세요");
+    return;
+  }
+
+  if (scores.q1 === null || label === "") {
+    alert("모든 문항(*)을 입력해야 합니다");
+    return;
+  }
+
+  if (currentStep === total) {
+  alert("모든 문항을 완료했습니다!");
+  }
+
+  try {
+    await axios.post("http://127.0.0.1:8000/submit", {
+      sample_id: current.sample_id,
+      annotator,
+      q1: scores.q1,
+      final_label: label
+    });
+
+    // alert 제거
+    fetchProgress();
+    fetchIAA();
+    nextSample();
+
+  } catch (err) {
+    console.error(err);
+    alert("제출 실패");
+  }
+};
+
+  const renderRadios = (q) =>
+    [1,2,3,4,5].map(n => (
+      <label key={n} className="radio">
+        <input
+          type="radio"
+          checked={scores[q] === n}
+          onChange={() => setScore(q, n)}
+        />
+        {n}
+      </label>
+    ));
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="container">
+
+      {/* HEADER */}
+      <div className="header">
+        <h1>News Sentence Human Evaluation</h1>
+
+        <div className="header-right">
+          <div className="progress-container">
+            <div className="progress-bar">
+              <div
+              className="progress-fill"
+              style={{
+              width: `${total ? (currentStep / total) * 100 : 0}%`
+              }}
+              />
+            </div>
+            <span className="progress-text">
+            {progress.done} / {progress.total}
+            </span>
+          </div>
+
+          <span className="current-step">
+            Sample {currentStep} / {total}
+          </span>
+          <span>IAA: {iaa ? iaa.toFixed(2) : "-"}</span>
+
+          <button onClick={prevSample} className="nav-btn" disabled={currentStep === 1}>← Prev</button>
+          <button onClick={nextSample} className="nav-btn" disabled={currentStep === total}>Next →</button>
         </div>
-        <div>
-          <h1>Get started</h1>
+      </div>
+
+      <div className="main">
+
+        {/* LEFT */}
+        <div className="card">
+          <div className="meta">
+            <div>Sample ID: {current.sample_id}</div>
+            <div>Article: {current.article_id}</div>
+            <div className="llm-big">LLM: {current.predicted}</div>
+          </div>
+
+          <p className="label">Previous Sentence</p>
+          <p>{current.previous}</p>
+
+          <p className="label">Target Sentence</p>
+          <p className="target">{current.target}</p>
+
+          <p className="label">Next Sentence</p>
+          <p>{current.next}</p>
+        </div>
+
+        {/* RIGHT */}
+        <div className="card">
+          <h2>Evaluation</h2>
+
+          {/* 👤 Annotator 선택 */}
+          <div className="question">
           <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+          Annotator
+          <span className="required">*</span>
           </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          <div className="annotator-group">
+          {["A", "B", "C"].map(a => (
+          <button
+          key={a}
+          onClick={() => setAnnotator(a)}
+          className={annotator === a ? "selected" : ""}
+          >
+          Annotator {a}
+          </button>
+          ))}
+          </div>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          <div className="question">
+            <p>
+            Q. LLM이 부여한 라벨이 적절한가?
+            <span className="required">*</span>
+            </p>
+            {renderRadios("q1")}
+          </div>
+
+          <div className="question">
+            <p>
+            Final Label
+            <span className="required">*</span>
+            </p>
+            <div className="label-group">
+              {["F", "C", "M", "Unsure"].map(l => (
+              <button
+              key={l}
+              onClick={() => setLabel(l)}
+              className={`label-btn ${label === l ? "active" : ""}`}
+              >
+              {l}
+              </button>
+              ))}
+            </div>
+          </div>
+
+          <button className="submit-btn" onClick={submit}>
+            Submit
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;
