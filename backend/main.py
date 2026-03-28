@@ -1,53 +1,135 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
-import sqlite3
+from fastapi.middleware.cors import CORSMiddleware
+from iaa import compute_fleiss_kappa
+from database import init_db, get_db
 
 app = FastAPI()
 
-# DB 연결
-conn = sqlite3.connect("data.db", check_same_thread=False)
-cursor = conn.cursor()
-
-# 테이블 생성
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS evaluations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    sample_id INTEGER,
-    annotator TEXT,
-    q1 INTEGER,
-    q2 INTEGER,
-    q3 INTEGER,
-    q4_1 INTEGER,
-    q4_2 INTEGER,
-    final_label TEXT
+# CORS (프론트 연결 필수)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-""")
 
-class Evaluation(BaseModel):
-    sample_id: int
-    annotator: str
-    q1: int
-    q2: int
-    q3: int
-    q4_1: int
-    q4_2: int
-    final_label: str
+# 테스트용 샘플들
+samples = [
+    {
+        "sample_id": "ART_0001",
+        "article_id": "ART",
+        "previous": "이 정책은 경제 성장에 도움이 될 것으로 보인다.",
+        "target": "하지만 실제 효과는 제한적일 수 있다는 비판도 존재한다.",
+        "next": "전문가들은 추가적인 보완이 필요하다고 말한다.",
+        "predicted": "M"
+    },
+    {
+        "sample_id": "ART_0002",
+        "article_id": "ART",
+        "previous": "정부는 새로운 정책을 발표했다.",
+        "target": "이 정책은 많은 논란을 일으키고 있다.",
+        "next": "국민들의 반응은 엇갈리고 있다.",
+        "predicted": "C"
+    }
+]
+
+current_idx = 0
+
+@app.on_event("startup")
+def startup():
+    init_db()
+
+@app.get("/sample")
+def get_sample():
+    return {
+        **samples[current_idx],
+        "current_index": current_idx + 1,
+        "total": len(samples)
+    }
+
+@app.get("/next")
+def next_sample():
+    global current_idx
+    current_idx = (current_idx + 1) % len(samples)
+
+    return {
+        **samples[current_idx],
+        "current_index": current_idx + 1,
+        "total": len(samples)
+    }
+
+@app.get("/prev")
+def prev_sample():
+    global current_idx
+    current_idx = (current_idx - 1) % len(samples)
+
+    return {
+        **samples[current_idx],
+        "current_index": current_idx + 1,
+        "total": len(samples)
+    }
+
 
 @app.post("/submit")
-def submit_eval(eval: Evaluation):
+def submit(data: dict):
+    conn = get_db()
+    cursor = conn.cursor()
+
     cursor.execute("""
-    INSERT INTO evaluations 
-    (sample_id, annotator, q1, q2, q3, q4_1, q4_2, final_label)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO annotations
+    (sample_id, annotator, final_label, q1)
+    VALUES (?, ?, ?, ?)
     """, (
-        eval.sample_id,
-        eval.annotator,
-        eval.q1,
-        eval.q2,
-        eval.q3,
-        eval.q4_1,
-        eval.q4_2,
-        eval.final_label
-    ))
+    data["sample_id"],
+    data["annotator"],
+    data["final_label"],
+    data["q1"]
+))
+
     conn.commit()
-    return {"status": "ok"}
+    conn.close()
+
+    return {"status": "saved"}
+
+
+@app.get("/progress")
+def progress():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    total_samples = len(samples)
+
+    done = cursor.execute("""
+        SELECT COUNT(DISTINCT sample_id)
+        FROM annotations
+    """).fetchone()[0]
+
+    conn.close()
+
+    return {"done": done, "total": total_samples}
+
+
+@app.get("/iaa")
+def get_iaa():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    rows = cursor.execute("""
+        SELECT sample_id, final_label
+        FROM annotations
+    """).fetchall()
+
+    conn.close()
+
+    data = [
+        {"sample_id": r[0], "label": r[1]}
+        for r in rows
+    ]
+
+    if len(data) == 0:
+        return {"kappa": 0}
+
+    kappa = compute_fleiss_kappa(data)
+
+    return {"kappa": kappa}
