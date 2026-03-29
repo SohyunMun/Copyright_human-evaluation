@@ -143,6 +143,14 @@ function App() {
     }
   };
 
+  const scoreDescriptions = {
+    5: "매우 적절함",
+    4: "적절함",
+    3: "보통",
+    2: "부적절함",
+    1: "매우 부적절함"
+  };
+
   const renderRadios = (q) =>
     [1, 2, 3, 4, 5].map((n) => (
       <label key={n} className="radio">
@@ -151,7 +159,7 @@ function App() {
           checked={scores[q] === n}
           onChange={() => setScore(q, n)}
         />
-        {n}
+        {n} : {scoreDescriptions[n]}
       </label>
     ));
 
