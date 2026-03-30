@@ -301,6 +301,47 @@ def progress_by_category(annotator: str):
     return result
 
 
+@app.get("/progress_detail")
+def progress_detail(category: str = "ALL"):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # 전체 샘플 수
+    if category == "ALL":
+        total = cursor.execute("SELECT COUNT(*) FROM samples").fetchone()[0]
+    else:
+        total = cursor.execute(
+            "SELECT COUNT(*) FROM samples WHERE category=?",
+            (category,)
+        ).fetchone()[0]
+
+    annotators = ["A", "B", "C"]
+    result = {}
+
+    for a in annotators:
+        if category == "ALL":
+            done = cursor.execute("""
+                SELECT COUNT(DISTINCT sample_id)
+                FROM annotations
+                WHERE annotator=?
+            """, (a,)).fetchone()[0]
+        else:
+            done = cursor.execute("""
+                SELECT COUNT(DISTINCT a.sample_id)
+                FROM annotations a
+                JOIN samples s ON a.sample_id = s.sample_id
+                WHERE a.annotator=? AND s.category=?
+            """, (a, category)).fetchone()[0]
+
+        result[a] = {
+            "done": done,
+            "total": total
+        }
+
+    conn.close()
+    return result
+
+
 from iaa import (
     compute_fleiss_kappa,
     # compute_exact_agreement,
