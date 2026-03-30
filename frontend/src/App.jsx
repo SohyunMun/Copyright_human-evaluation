@@ -9,7 +9,10 @@ function App() {
 
   const [sample, setSample] = useState(null);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
-  const [iaa, setIAA] = useState(null);
+  const [iaa, setIAA] = useState({
+    fleiss_kappa: 0,
+    krippendorff_alpha: 0
+  });
 
   const [currentStep, setCurrentStep] = useState(1);
   const [total, setTotal] = useState(1);
@@ -28,6 +31,7 @@ function App() {
   useEffect(() => {
     if (current && annotator) {
       loadAnnotation(current);
+      fetchProgress();
     }
   }, [annotator]);
 
@@ -93,13 +97,15 @@ function App() {
   };
 
   const fetchProgress = async () => {
-    const res = await axios.get("http://127.0.0.1:8000/progress");
+    const res = await axios.get(
+      `http://127.0.0.1:8000/progress?annotator=${annotator || ""}`
+    );
     setProgress(res.data);
   };
 
   const fetchIAA = async () => {
     const res = await axios.get("http://127.0.0.1:8000/iaa");
-    setIAA(res.data.kappa);
+    setIAA(res.data);
   };
 
   const resetState = () => {
@@ -191,7 +197,20 @@ function App() {
           <span className="current-step">
             Sample {currentStep} / {total}
           </span>
-          <span>IAA: {iaa ? iaa.toFixed(2) : "-"}</span>
+          
+          {/* 핵심 지표만 */}
+          <span>
+            Fleiss: {iaa.fleiss_kappa?.toFixed(2) || "-"}
+          </span>
+          <span>
+            Alpha: {iaa.krippendorff_alpha?.toFixed(2) || "-"}
+          </span>
+          {/* <span>
+            Exact: {iaa.exact_agreement?.toFixed(2) || "-"}
+          </span>
+          <span>
+            Partial: {iaa.partial_agreement?.toFixed(2) || "-"}
+          </span> */}
 
           <button
             onClick={prevSample}
