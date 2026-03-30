@@ -32,7 +32,7 @@ def get_all_samples():
     rows = cursor.execute("""
         SELECT sample_id, article_id, category, previous, target, next, predicted
         FROM samples
-        ORDER BY sample_id
+        ORDER BY rowid
     """).fetchall()
 
     conn.close()
