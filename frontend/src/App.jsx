@@ -35,6 +35,12 @@ function App() {
     }
   }, [annotator]);
 
+  // category 변경 시 
+  useEffect(() => {
+    fetchSample(category);
+    fetchProgress(category);
+  }, [category]);
+
   // 샘플 + annotation 로드 함수
   const loadAnnotation = async (sampleData) => {
     if (annotator) {
@@ -96,9 +102,9 @@ function App() {
     await loadAnnotation(data);
   };
 
-  const fetchProgress = async () => {
+  const fetchProgress = async (selectedCategory = category) => {
     const res = await axios.get(
-      `http://127.0.0.1:8000/progress?annotator=${annotator || ""}`
+      `http://127.0.0.1:8000/progress?annotator=${annotator || ""}&category=${selectedCategory}`
     );
     setProgress(res.data);
   };
@@ -185,17 +191,20 @@ function App() {
               <div
                 className="progress-fill"
                 style={{
-                  width: `${total ? (currentStep / total) * 100 : 0}%`
+                  width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%`
                 }}
               />
             </div>
+
+            {/* annotator 기준 진행도 */}
             <span className="progress-text">
               {progress.done} / {progress.total}
             </span>
           </div>
 
+          {/* 현재 탐색 위치 */}
           <span className="current-step">
-            Sample {currentStep} / {total}
+            Viewing {currentStep} / {total}
           </span>
           
           {/* 핵심 지표만 */}
