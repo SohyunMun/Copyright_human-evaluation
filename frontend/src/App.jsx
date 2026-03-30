@@ -16,6 +16,8 @@ function App() {
 
   const current = sample;
 
+  const [category, setCategory] = useState("ALL");
+
   useEffect(() => {
     fetchSample();
     fetchProgress();
@@ -47,9 +49,9 @@ function App() {
     }
   };
 
-  const fetchSample = async () => {
+  const fetchSample = async (selectedCategory = category) => {
     const res = await axios.get(
-      `http://127.0.0.1:8000/sample${annotator ? `?annotator=${annotator}` : ""}`
+      `http://127.0.0.1:8000/sample?annotator=${annotator || ""}&category=${selectedCategory}`
     );
     const data = res.data;
 
@@ -64,7 +66,7 @@ function App() {
     if (currentStep === total) return;
 
     const res = await axios.get(
-      `http://127.0.0.1:8000/next${annotator ? `?annotator=${annotator}` : ""}`
+      `http://127.0.0.1:8000/next?annotator=${annotator || ""}&category=${category}`
     );
     const data = res.data;
 
@@ -79,7 +81,7 @@ function App() {
     if (currentStep === 1) return;
 
     const res = await axios.get(
-      `http://127.0.0.1:8000/prev${annotator ? `?annotator=${annotator}` : ""}`
+      `http://127.0.0.1:8000/prev?annotator=${annotator || ""}&category=${category}`
     );
     const data = res.data;
 
@@ -230,6 +232,21 @@ function App() {
         {/* RIGHT */}
         <div className="card">
           <h2>Evaluation</h2>
+
+          <div className="category-group">
+            {["ALL","경제","정치","사회","문화","국제","IT과학","스포츠","교육","라이프스타일","지역"].map(c => (
+              <button
+                key={c}
+                onClick={() => {
+                  setCategory(c);
+                  fetchSample(c);
+                }}
+                className={category === c ? "selected" : ""}
+                >
+                  {c}
+                </button>
+                ))}
+              </div>
 
           <div className="question">
             <p>

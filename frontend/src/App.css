@@ -258,3 +258,22 @@ button.selected {
   color: #374151;
   font-weight: 500;
 }
+
+.category-group {
+  display: flex;
+  flex-wrap: wrap;    
+  gap: 7px;  
+  margin-bottom: 15px;
+}
+
+.category-group button {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  font-size: 13px;
+}
+
+.category-group button.selected {
+  background: #4f83f3;
+  color: white;
+}
