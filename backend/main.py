@@ -394,7 +394,7 @@ def get_iaa():
         "alpha_q1": compute_krippendorff_alpha_q1(filtered_dict)
     }
 
-    @app.get("/annotations")
+@app.get("/annotations")
 def get_all_annotations():
     conn = get_db()
     cursor = conn.cursor()
