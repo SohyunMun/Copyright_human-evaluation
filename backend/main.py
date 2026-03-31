@@ -457,3 +457,10 @@ def export_csv():
         output, media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=annotations.csv"}
     )
+
+@app.get("/samples")
+def get_samples_list():
+    return [
+        {"sample_id": s["sample_id"], "category": s["category"]}
+        for s in samples
+    ]
