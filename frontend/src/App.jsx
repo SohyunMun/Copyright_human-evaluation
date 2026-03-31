@@ -18,7 +18,7 @@ function AdminPage({ onBack }) {
   return (
     <div className="container">
       <div className="header">
-        <h1>관리자 대시보드</h1>
+        <h1>진행도 대시보드</h1>
         <button onClick={onBack} className="nav-btn">← 돌아가기</button>
       </div>
       <div className="main">
@@ -61,7 +61,7 @@ function AdminPage({ onBack }) {
 }
 
 function App() {
-  const [annotator, setAnnotator] = useState(null);
+  const [annotator, setAnnotator] = useState(() => localStorage.getItem("annotator") || null);
   const [scores, setScores] = useState({ q1: null });
   const [label, setLabel] = useState("");
   const [sample, setSample] = useState(null);
@@ -74,8 +74,6 @@ function App() {
   const [submittedIndices, setSubmittedIndices] = useState(new Set());
   const [showAdmin, setShowAdmin] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  // 샘플 목록 이동용
   const [allSamples, setAllSamples] = useState([]);
   const [jumpOpen, setJumpOpen] = useState(false);
   const [jumpCategory, setJumpCategory] = useState("ALL");
@@ -126,12 +124,27 @@ function App() {
     setAllSamples(res.data);
   }, []);
 
-  // 초기 로드
+  // 초기 로드 — localStorage에 저장된 annotator 복원
   useEffect(() => {
-    fetchSampleByIndex(0);
+    const savedAnnotator = localStorage.getItem("annotator");
+
     fetchIAA();
     fetchProgressDetail();
     fetchAllSamples();
+
+    if (savedAnnotator) {
+      fetchProgress(savedAnnotator, "ALL");
+      fetchSubmittedIndices(savedAnnotator, "ALL");
+      axios.get(`${BASE_URL}/last_index?annotator=${savedAnnotator}&category=ALL`)
+        .then(res => {
+          const lastIdx = res.data.last_index;
+          fetchSampleByIndex(lastIdx, "ALL").then(data => {
+            loadAnnotation(data, savedAnnotator);
+          });
+        });
+    } else {
+      fetchSampleByIndex(0);
+    }
   }, []);
 
   // category 변경
@@ -144,6 +157,7 @@ function App() {
 
   const handleAnnotatorSelect = async (a) => {
     setAnnotator(a);
+    localStorage.setItem("annotator", a);
     fetchProgress(a, category);
     fetchSubmittedIndices(a, category);
     const res = await axios.get(`${BASE_URL}/last_index?annotator=${a}&category=${category}`);
@@ -198,7 +212,6 @@ function App() {
     }
   };
 
-  // 점프 목록 — jumpCategory 기준으로 필터
   const jumpList = jumpCategory === "ALL"
     ? allSamples
     : allSamples.filter(s => s.category === jumpCategory);
@@ -220,7 +233,6 @@ function App() {
 
   return (
     <div className="container">
-      {/* HEADER */}
       <div className="header">
         <h1>News Sentence Human Evaluation</h1>
         <div className="header-right nowrap">
@@ -245,16 +257,13 @@ function App() {
               })}
             </div>
           </div>
-
           <span className="inline-text">Viewing {currentStep} / {total}</span>
           <span className="inline-text">Fleiss(Label): {iaa.fleiss_kappa?.toFixed(2) ?? "-"}</span>
           <span className="inline-text">Alpha(Score): {iaa.alpha_q1?.toFixed(2) ?? "-"}</span>
-
           <button onClick={() => setShowAdmin(true)} className="nav-btn"
             style={{ background: "#6366f1", color: "white" }}>
-            관리자
+            대시보드
           </button>
-
           <div className="nav-group">
             <button onClick={prevSample} className="nav-btn" disabled={currentStep === 1}>← Prev</button>
             <button onClick={nextSample} className="nav-btn" disabled={currentStep === total}>Next →</button>
@@ -302,7 +311,6 @@ function App() {
 
             {jumpOpen && (
               <div style={{ border: "1px solid #334155", borderRadius: 8, padding: 12, background: "#1e293b" }}>
-                {/* 점프용 카테고리 선택 */}
                 <div style={{ marginBottom: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
                   {CATEGORIES.map(c => (
                     <button
@@ -315,8 +323,6 @@ function App() {
                     </button>
                   ))}
                 </div>
-
-                {/* 샘플 목록 */}
                 <select
                   style={{
                     width: "100%",
@@ -330,14 +336,13 @@ function App() {
                   size={10}
                   onChange={async (e) => {
                     const globalIdx = parseInt(e.target.value);
-                    // category는 ALL로 고정해서 전체 index 기준으로 이동
                     const data = await fetchSampleByIndex(globalIdx, "ALL");
                     setCategory("ALL");
                     await loadAnnotation(data);
                     setJumpOpen(false);
                   }}
                 >
-                  {jumpList.map((s, i) => {
+                  {jumpList.map((s) => {
                     const globalIdx = allSamples.findIndex(orig => orig.sample_id === s.sample_id);
                     const isSubmitted = annotator && submittedIndices.has(globalIdx);
                     return (
