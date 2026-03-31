@@ -24,8 +24,8 @@ function App() {
 
   const ANNOTATORS = ["A", "B", "C", "D", "E"];
 
-  const BASE_URL = "https://copyright-human-evaluation.onrender.com";
-
+  const BASE_URL = "https://copyrighthuman-evaluation-production-df30.up.railway.app";
+  
   useEffect(() => {
     fetchSample();
     fetchProgress();
