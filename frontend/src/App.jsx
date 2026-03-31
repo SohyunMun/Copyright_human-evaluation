@@ -4,6 +4,7 @@ import "./App.css";
 
 const BASE_URL = "https://copyrighthuman-evaluation-production-df30.up.railway.app";
 const ANNOTATORS = ["A", "B", "C", "D", "E"];
+const CATEGORIES = ["ALL","경제","정치","사회","문화","국제","IT과학","스포츠","교육","라이프스타일","지역"];
 
 function AdminPage({ onBack }) {
   const [adminData, setAdminData] = useState(null);
@@ -72,9 +73,12 @@ function App() {
   const [progressDetail, setProgressDetail] = useState({});
   const [submittedIndices, setSubmittedIndices] = useState(new Set());
   const [showAdmin, setShowAdmin] = useState(false);
-
-  // 현재 index (0-based, 프론트에서 관리)
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  // 샘플 목록 이동용
+  const [allSamples, setAllSamples] = useState([]);
+  const [jumpOpen, setJumpOpen] = useState(false);
+  const [jumpCategory, setJumpCategory] = useState("ALL");
 
   const loadAnnotation = useCallback(async (sampleData, ann) => {
     const a = ann ?? annotator;
@@ -117,11 +121,17 @@ function App() {
     setIAA(res.data);
   }, []);
 
+  const fetchAllSamples = useCallback(async () => {
+    const res = await axios.get(`${BASE_URL}/samples`);
+    setAllSamples(res.data);
+  }, []);
+
   // 초기 로드
   useEffect(() => {
     fetchSampleByIndex(0);
     fetchIAA();
     fetchProgressDetail();
+    fetchAllSamples();
   }, []);
 
   // category 변경
@@ -132,13 +142,10 @@ function App() {
     if (annotator) fetchSubmittedIndices(annotator, category);
   }, [category]);
 
-  // annotator 선택 시 마지막 위치로 이동
   const handleAnnotatorSelect = async (a) => {
     setAnnotator(a);
     fetchProgress(a, category);
     fetchSubmittedIndices(a, category);
-
-    // 마지막 제출 위치로 이동
     const res = await axios.get(`${BASE_URL}/last_index?annotator=${a}&category=${category}`);
     const lastIdx = res.data.last_index;
     const data = await fetchSampleByIndex(lastIdx, category);
@@ -169,7 +176,6 @@ function App() {
   const submit = async () => {
     if (!annotator) { alert("Annotator를 선택하세요"); return; }
     if (scores.q1 === null || label === "") { alert("모든 문항(*)을 입력해야 합니다"); return; }
-
     try {
       await axios.post(`${BASE_URL}/submit`, {
         sample_id: sample.sample_id,
@@ -181,7 +187,6 @@ function App() {
       fetchProgressDetail(category);
       fetchSubmittedIndices(annotator, category);
       fetchIAA();
-
       if (currentStep < total) {
         await nextSample();
       } else {
@@ -192,6 +197,11 @@ function App() {
       alert("제출 실패");
     }
   };
+
+  // 점프 목록 — jumpCategory 기준으로 필터
+  const jumpList = jumpCategory === "ALL"
+    ? allSamples
+    : allSamples.filter(s => s.category === jumpCategory);
 
   const scoreDescriptions = {
     5: "매우 적절함", 4: "적절함", 3: "보통", 2: "부적절함", 1: "매우 부적절함"
@@ -240,7 +250,8 @@ function App() {
           <span className="inline-text">Fleiss(Label): {iaa.fleiss_kappa?.toFixed(2) ?? "-"}</span>
           <span className="inline-text">Alpha(Score): {iaa.alpha_q1?.toFixed(2) ?? "-"}</span>
 
-          <button onClick={() => setShowAdmin(true)} className="nav-btn" style={{ background: "#6366f1", color: "white" }}>
+          <button onClick={() => setShowAdmin(true)} className="nav-btn"
+            style={{ background: "#6366f1", color: "white" }}>
             관리자
           </button>
 
@@ -271,11 +282,80 @@ function App() {
         <div className="card">
           <h2>Evaluation</h2>
 
-          {/* 카테고리 */}
+          {/* 카테고리 필터 */}
           <div className="category-group">
-            {["ALL","경제","정치","사회","문화","국제","IT과학","스포츠","교육","라이프스타일","지역"].map(c => (
-              <button key={c} onClick={() => setCategory(c)} className={category === c ? "selected" : ""}>{c}</button>
+            {CATEGORIES.map(c => (
+              <button key={c} onClick={() => setCategory(c)}
+                className={category === c ? "selected" : ""}>{c}</button>
             ))}
+          </div>
+
+          {/* 샘플 목록으로 이동 */}
+          <div style={{ marginBottom: 12 }}>
+            <button
+              onClick={() => setJumpOpen(!jumpOpen)}
+              className="nav-btn"
+              style={{ marginBottom: 6, width: "100%" }}
+            >
+              📋 샘플 목록으로 이동 {jumpOpen ? "▲" : "▼"}
+            </button>
+
+            {jumpOpen && (
+              <div style={{ border: "1px solid #334155", borderRadius: 8, padding: 12, background: "#1e293b" }}>
+                {/* 점프용 카테고리 선택 */}
+                <div style={{ marginBottom: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                  {CATEGORIES.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setJumpCategory(c)}
+                      className={jumpCategory === c ? "selected" : ""}
+                      style={{ fontSize: 11, padding: "2px 6px" }}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 샘플 목록 */}
+                <select
+                  style={{
+                    width: "100%",
+                    padding: 8,
+                    background: "#0f172a",
+                    color: "#f1f5f9",
+                    border: "1px solid #475569",
+                    borderRadius: 6,
+                    fontSize: 13
+                  }}
+                  size={10}
+                  onChange={async (e) => {
+                    const globalIdx = parseInt(e.target.value);
+                    // category는 ALL로 고정해서 전체 index 기준으로 이동
+                    const data = await fetchSampleByIndex(globalIdx, "ALL");
+                    setCategory("ALL");
+                    await loadAnnotation(data);
+                    setJumpOpen(false);
+                  }}
+                >
+                  {jumpList.map((s, i) => {
+                    const globalIdx = allSamples.findIndex(orig => orig.sample_id === s.sample_id);
+                    const isSubmitted = annotator && submittedIndices.has(globalIdx);
+                    return (
+                      <option
+                        key={s.sample_id}
+                        value={globalIdx}
+                        style={{ color: isSubmitted ? "#22c55e" : "#f1f5f9" }}
+                      >
+                        {isSubmitted ? "✅ " : "⬜ "} {s.sample_id}
+                      </option>
+                    );
+                  })}
+                </select>
+                <p style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+                  ✅ 초록색 = 제출완료 &nbsp; ⬜ 흰색 = 미제출 (Annotator 선택 시 표시)
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Annotator */}
