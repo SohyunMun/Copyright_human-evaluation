@@ -456,3 +456,25 @@ def export_csv():
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=annotations.csv"}
     )
+
+@app.get("/last_index")
+def get_last_index(annotator: str, category: str = "ALL"):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    if category == "ALL":
+        done = cursor.execute("""
+            SELECT COUNT(DISTINCT sample_id)
+            FROM annotations
+            WHERE annotator=?
+        """, (annotator,)).fetchone()[0]
+    else:
+        done = cursor.execute("""
+            SELECT COUNT(DISTINCT a.sample_id)
+            FROM annotations a
+            JOIN samples s ON a.sample_id = s.sample_id
+            WHERE a.annotator=? AND s.category=?
+        """, (annotator, category)).fetchone()[0]
+    
+    conn.close()
+    return {"last_index": done}
