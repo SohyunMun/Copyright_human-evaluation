@@ -1,25 +1,17 @@
 ## 실행 방법
 
-### 1. Back-End 서버 실행
 ```bash
-# 가상환경 활성화
-conda activate be
+# 가상환경 생성 및 활성화
+conda create -n copyright python=3.10
+conda activate copyright
 
-# 백엔드 디렉토리로 이동
-cd gayeon/human-evaluation/backend
-
-# 서버 실행
+# Back-End 서버 실행
+cd backend
+pip install fastapi uvicorn numpy scikit-learn krippendorff
 uvicorn main:app --reload
-```
 
-### 2. Front-End 서버 실행
-``` bash
-# 가상환경 활성화
-conda activate fe
-
-# 프론트엔드 디렉토리로 이동
-cd gayeon/human-evaluation/frontend
-
-# 서버 실행
+# Front-End 서버 실행
+cd frontend
+npm install
 npm run dev
 ```
