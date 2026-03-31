@@ -68,15 +68,13 @@ function App() {
 
   const fetchSample = async (selectedCategory = category) => {
     const res = await axios.get(
-      `${BASE_URL}/sample?annotator=${annotator || ""}&category=${selectedCategory}`
+        `${BASE_URL}/sample?annotator=${annotator || ""}&category=${selectedCategory}`
     );
-
-    setSample(data);
+    setSample(data);           // ← 여기 data가 정의 안 됨
     setCurrentStep(data.current_index);
     setTotal(data.total);
-
     await loadAnnotation(data);
-  };
+};
 
   const nextSample = async () => {
     if (currentStep === total) return;
