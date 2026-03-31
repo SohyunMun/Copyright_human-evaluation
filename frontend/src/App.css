@@ -1,18 +1,21 @@
 body, html {
   margin: 0;
   padding: 0;
-  overflow: auto;
+  overflow-y: auto;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  overflow-y: auto;
 }
 
 /* 전체 */
 .container {
   font-family: Arial, Helvetica, sans-serif;
-  padding: 30px;
-  background: #ffffff;
   max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
-
 }
 
 /* 헤더 */
@@ -28,7 +31,6 @@ body, html {
   font-weight: 600;
 }
 
-/* Progress / IAA 강조 */
 .header-right {
   display: flex;
   gap: 18px;
@@ -38,18 +40,15 @@ body, html {
   font-weight: 500;
 }
 
-/* 버튼 클릭 느낌 */
 button:active {
   transform: scale(0.96);
 }
 
-/* disabled 상태 */
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* prev / next 버튼 */
 .nav-btn {
   background: #111827;
   color: white;
@@ -67,6 +66,7 @@ button:disabled {
 .main {
   display: flex;
   gap: 25px;
+  flex-wrap: wrap;
 }
 
 /* 카드 */
@@ -76,9 +76,9 @@ button:disabled {
   padding: 22px;
   width: 100%;
   box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+  overflow-y: auto;
 }
 
-/* 메타 */
 .meta {
   display: flex;
   justify-content: space-between;
@@ -93,7 +93,6 @@ button:disabled {
   color: #dc2e2e;
 }
 
-/* 텍스트 */
 .label {
   font-size: 13px;
   color: #747272;
@@ -110,7 +109,6 @@ button:disabled {
   margin: 6px 0;
 }
 
-/* 질문 */
 .question {
   margin-bottom: 20px;
 }
@@ -120,21 +118,17 @@ button:disabled {
   margin-bottom: 8px;
 }
 
-/* 필수 표시 */
 .required {
   color: #dc2e2e;
   margin-left: 4px;
 }
 
-/* 라디오 커스텀 */
-/* Final Label 버튼 그룹 */
 .label-group {
   display: flex;
   gap: 10px;
   margin-top: 8px;
 }
 
-/* 기본 버튼 */
 .label-btn {
   padding: 10px 0;
   border-radius: 10px;
@@ -145,12 +139,10 @@ button:disabled {
   width: 80px;
 }
 
-/* hover */
 .label-btn:hover {
   background: #e5e7eb;
 }
 
-/* 선택된 상태 */
 .label-btn.active {
   background: #4f83f3;
   color: white;
@@ -190,7 +182,6 @@ button:disabled {
   left: 2px;
 }
 
-/* Select 디자인 개선 */
 .select {
   width: 100%;
   padding: 10px;
@@ -200,7 +191,6 @@ button:disabled {
   font-size: 14px;
 }
 
-/* 버튼 */
 button {
   cursor: pointer;
   border: none;
@@ -213,7 +203,6 @@ button:hover {
   opacity: 0.9;
 }
 
-/* Annotator 선택 */
 button.selected {
   background-color: #4f83f3;
   color: white;
@@ -225,7 +214,6 @@ button.selected {
   margin-top: 6px;
 }
 
-/* Submit */
 .submit-btn {
   width: 100%;
   padding: 12px;
@@ -239,14 +227,12 @@ button.selected {
   background: #1f2937;
 }
 
-/* Progress 전체 */
 .progress-container {
   display: flex;
   align-items: center;
   gap: 20px;
 }
 
-/* 바 배경 */
 .progress-bar {
   width: 120px;
   height: 8px;
@@ -255,7 +241,6 @@ button.selected {
   overflow: hidden;
 }
 
-/* 실제 진행 */
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #22c55e, #16a34a);
@@ -263,7 +248,6 @@ button.selected {
   transition: width 0.3s ease;
 }
 
-/* 텍스트 */
 .progress-text {
   font-size: 18px;
   color: #374151;
@@ -271,9 +255,10 @@ button.selected {
 }
 
 .category-group {
-  display: flex;   
-  gap: 4px;  
+  display: flex;
+  gap: 4px;
   margin-bottom: 15px;
+  flex-wrap: wrap;
 }
 
 .category-group button {
@@ -311,7 +296,6 @@ button.selected {
   background: #4a90e2;
 }
 
-/* 한 줄 강제 */
 .nowrap {
   display: flex;
   align-items: center;
@@ -320,18 +304,15 @@ button.selected {
   white-space: nowrap;
 }
 
-/* 텍스트 inline */
 .inline-text {
   font-size: 18px;
 }
 
-/* nav 버튼 그룹 */
 .nav-group {
   display: flex;
   gap: 8px;
 }
 
-/* annotator 가로 배치 */
 .annotator-progress.horizontal {
   display: flex;
   gap: 10px;
