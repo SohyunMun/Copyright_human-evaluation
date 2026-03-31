@@ -393,3 +393,66 @@ def get_iaa():
         "fleiss_kappa": compute_fleiss_kappa(fleiss_input),
         "alpha_q1": compute_krippendorff_alpha_q1(filtered_dict)
     }
+
+    @app.get("/annotations")
+def get_all_annotations():
+    conn = get_db()
+    cursor = conn.cursor()
+    rows = cursor.execute("""
+        SELECT sample_id, annotator, final_label, q1
+        FROM annotations
+        ORDER BY sample_id, annotator
+    """).fetchall()
+    conn.close()
+    return [
+        {"sample_id": r[0], "annotator": r[1],
+         "final_label": r[2], "q1": r[3]}
+        for r in rows
+    ]
+
+
+@app.get("/export/json")
+def export_json():
+    conn = get_db()
+    cursor = conn.cursor()
+    rows = cursor.execute("""
+        SELECT sample_id, annotator, final_label, q1
+        FROM annotations
+        ORDER BY sample_id, annotator
+    """).fetchall()
+    conn.close()
+    data = [
+        {"sample_id": r[0], "annotator": r[1],
+         "final_label": r[2], "q1": r[3]}
+        for r in rows
+    ]
+    output = io.StringIO()
+    json.dump(data, output, ensure_ascii=False, indent=2)
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type="application/json",
+        headers={"Content-Disposition": "attachment; filename=annotations.json"}
+    )
+
+
+@app.get("/export/csv")
+def export_csv():
+    conn = get_db()
+    cursor = conn.cursor()
+    rows = cursor.execute("""
+        SELECT sample_id, annotator, final_label, q1
+        FROM annotations
+        ORDER BY sample_id, annotator
+    """).fetchall()
+    conn.close()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["sample_id", "annotator", "final_label", "q1"])
+    writer.writerows(rows)
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=annotations.csv"}
+    )
