@@ -478,3 +478,20 @@ def get_last_index(annotator: str, category: str = "ALL"):
     
     conn.close()
     return {"last_index": done}
+
+@app.get("/goto")
+def goto_sample(index: int, category: str = "ALL"):
+    global current_idx
+    
+    filtered = samples
+    if category and category != "ALL":
+        filtered = [s for s in samples if s["category"] == category]
+    
+    current_idx = min(index, len(filtered) - 1)
+    sample = filtered[current_idx]
+    
+    return {
+        **sample,
+        "current_index": current_idx + 1,
+        "total": len(filtered)
+    }
