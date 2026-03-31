@@ -11,7 +11,7 @@ function App() {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [iaa, setIAA] = useState({
     fleiss_kappa: 0,
-    krippendorff_alpha: 0
+    alpha_q1: 0
   });
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -41,6 +41,7 @@ function App() {
     fetchSample(category);
     fetchProgress();
     fetchProgressDetail(category);
+    fetchIAA();
   }, [category]);
 
   // 샘플 + annotation 로드 함수
@@ -240,17 +241,11 @@ function App() {
           
           {/* IAA */}
           <span className="inline-text">
-            Fleiss: {iaa.fleiss_kappa?.toFixed(2) || "-"}
+            Fleiss(Label): {iaa.fleiss_kappa?.toFixed(2) ?? "-"}
           </span>
           <span className="inline-text">
-            Alpha: {iaa.krippendorff_alpha?.toFixed(2) || "-"}
+            Alpha(Score): {iaa.alpha_q1?.toFixed(2) ?? "-"}
           </span>
-          {/* <span>
-            Exact: {iaa.exact_agreement?.toFixed(2) || "-"}
-          </span>
-          <span>
-            Partial: {iaa.partial_agreement?.toFixed(2) || "-"}
-          </span> */}
 
           <div className="nav-group">
             <button
@@ -300,7 +295,6 @@ function App() {
                 key={c}
                 onClick={() => {
                   setCategory(c);
-                  fetchSample(c);
                 }}
                 className={category === c ? "selected" : ""}
                 >
