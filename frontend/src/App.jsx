@@ -70,7 +70,8 @@ function App() {
     const res = await axios.get(
         `${BASE_URL}/sample?annotator=${annotator || ""}&category=${selectedCategory}`
     );
-    setSample(data);           // ← 여기 data가 정의 안 됨
+    const data = res.data;     // ← 이 줄 추가
+    setSample(data);
     setCurrentStep(data.current_index);
     setTotal(data.total);
     await loadAnnotation(data);
