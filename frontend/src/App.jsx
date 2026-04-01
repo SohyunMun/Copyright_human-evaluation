@@ -5,6 +5,7 @@ import "./App.css";
 const BASE_URL = "https://copyrighthuman-evaluation-production-df30.up.railway.app";
 const ANNOTATORS = ["A", "B", "C", "D", "E"];
 const CATEGORIES = ["ALL","경제","정치","사회","문화","국제","IT과학","스포츠","교육","라이프스타일","지역"];
+const [submittedSampleIds, setSubmittedSampleIds] = useState(new Set());
 
 const STATUS_LABELS = {
   confirmed:              { text: "✅ 최종 확정",           color: "#16a34a" },
@@ -677,14 +678,14 @@ function App() {
     try {
       const res = await axios.get(`${BASE_URL}/submitted_ids?annotator=${ann}&category=${cat}&round_num=1`);
       setSubmittedIndices(new Set(res.data.submitted_indices));
-    } catch { /* ignore */ }
-  }, []);
-
-  const fetchSampleByIndex = useCallback(async (idx, cat) => {
-    const res = await axios.get(`${BASE_URL}/sample?index=${idx}&category=${cat ?? "ALL"}`);
-    const data = res.data;
-    setSample(data); setCurrentStep(data.current_index); setTotal(data.total); setCurrentIndex(idx);
-    return data;
+  
+      // sample_id 기반으로도 저장
+      const allRes = await axios.get(`${BASE_URL}/annotations?annotator=${ann}`);
+      const ids = (allRes.data || [])
+        .filter(a => a.round === 1)
+        .map(a => a.sample_id);
+      setSubmittedSampleIds(new Set(ids));
+    } catch { }
   }, []);
 
   const fetchProgress = useCallback(async (ann, cat) => {
@@ -913,8 +914,10 @@ function App() {
                   {jumpList.map(s => {
                     const globalIdx = allSamples.findIndex(o => o.sample_id === s.sample_id);
                     const clf = sampleClassification[s.sample_id];
-                    const mark = clf?.status === "confirmed" || clf?.status === "confirmed_relabeled" ? "✅"
-                      : clf?.status === "needs_relabeling" ? "⚠️" : clf?.status === "disagreement" ? "❌" : "⬜";
+                    const mySubmitted = annotator && submittedSampleIds.has(s.sample_id);
+                    const mark = mySubmitted ? "✅"
+                      : clf?.status === "needs_relabeling" ? "⚠️"
+                      : clf?.status === "disagreement" ? "❌" : "⬜";
                     return <option key={s.sample_id} value={globalIdx}>{mark} {s.sample_id}</option>;
                   })}
                 </select>
