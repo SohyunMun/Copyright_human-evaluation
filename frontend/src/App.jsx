@@ -5,7 +5,6 @@ import "./App.css";
 const BASE_URL = "https://copyrighthuman-evaluation-production-df30.up.railway.app";
 const ANNOTATORS = ["A", "B", "C", "D", "E"];
 const CATEGORIES = ["ALL","경제","정치","사회","문화","국제","IT과학","스포츠","교육","라이프스타일","지역"];
-const [submittedSampleIds, setSubmittedSampleIds] = useState(new Set());
 
 const STATUS_LABELS = {
   confirmed:              { text: "✅ 최종 확정",           color: "#16a34a" },
@@ -657,6 +656,7 @@ function App() {
   const [page, setPage] = useState("main");
   const [sampleClassification, setSampleClassification] = useState({});
   const [relabelCount, setRelabelCount] = useState(0);
+  const [submittedSampleIds, setSubmittedSampleIds] = useState(new Set());
 
   const currentStatus = sample ? (sampleClassification[sample.sample_id] || null) : null;
   const resetState = () => { setScores({ q1: null }); setLabel(""); };
