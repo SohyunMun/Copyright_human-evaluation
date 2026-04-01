@@ -16,10 +16,6 @@ const STATUS_LABELS = {
 };
 
 
-/* ═══════════════════════════════════════════════════════════════
-   가이드라인 패널 — 항상 노출 (좌측 사이드바)
-   PDF 섹션 4 + 5
-   ═══════════════════════════════════════════════════════════════ */
 function GuidelinePanel() {
   return (
     <div className="guideline-panel">
@@ -60,12 +56,7 @@ function GuidelinePanel() {
               <div><span style={{ color: "#d97706", fontWeight: 700 }}>BOTH →</span> M (사실 + 표현 혼재)</div>
             </div>
           </div>
-          <div style={{ fontSize: 11, color: "#6b7280" }}>
-            <strong style={{ color: "#374151" }}>Q1 점수 기준</strong>
-            <div style={{ marginTop: 4, lineHeight: 1.7 }}>
-              5 매우 적절 · 4 적절 · 3 보통 · 2 부적절 · 1 매우 부적절
-            </div>
-          </div>
+
         </div>
       </div>
     </div>
@@ -78,6 +69,23 @@ function GuidelinePanel() {
    ═══════════════════════════════════════════════════════════════ */
 function AdminPage({ onBack }) {
   const [adminData, setAdminData] = useState(null);
+  const [dbQuery, setDbQuery] = useState({ open: false, sampleId: "", annotator: "", roundNum: "", data: [], total: 0, loading: false });
+
+  const runDbQuery = async (offset = 0) => {
+    setDbQuery(prev => ({ ...prev, loading: true }));
+    try {
+      const params = new URLSearchParams();
+      if (dbQuery.sampleId) params.append("sample_id", dbQuery.sampleId);
+      if (dbQuery.annotator) params.append("annotator", dbQuery.annotator);
+      if (dbQuery.roundNum) params.append("round_num", dbQuery.roundNum);
+      params.append("limit", "100");
+      params.append("offset", String(offset));
+      const res = await axios.get(`${BASE_URL}/db_query?${params.toString()}`);
+      setDbQuery(prev => ({ ...prev, data: res.data.data, total: res.data.total, loading: false }));
+    } catch {
+      setDbQuery(prev => ({ ...prev, loading: false }));
+    }
+  };
 
   useEffect(() => {
     axios.get(`${BASE_URL}/admin`).then(res => setAdminData(res.data));
@@ -256,6 +264,75 @@ function AdminPage({ onBack }) {
             </div>
           ))}
 
+          {/* ── DB 조회 ── */}
+          <h2 className="dash-section-title" style={{ marginTop: 28 }}>DB 조회</h2>
+          <div style={{ marginBottom: 16 }}>
+            <button onClick={() => setDbQuery(prev => ({ ...prev, open: !prev.open }))} className="nav-btn"
+              style={{ background: "#374151", marginBottom: 8 }}>
+              🔍 DB 직접 조회 {dbQuery.open ? "▲" : "▼"}
+            </button>
+            {dbQuery.open && (
+              <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: 12 }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                  <input placeholder="Sample ID (부분 검색)" value={dbQuery.sampleId}
+                    onChange={e => setDbQuery(prev => ({ ...prev, sampleId: e.target.value }))}
+                    style={{ flex: 1, padding: 6, borderRadius: 6, border: "1px solid #d1d5db", fontSize: 12, minWidth: 140 }} />
+                  <select value={dbQuery.annotator}
+                    onChange={e => setDbQuery(prev => ({ ...prev, annotator: e.target.value }))}
+                    style={{ padding: 6, borderRadius: 6, border: "1px solid #d1d5db", fontSize: 12 }}>
+                    <option value="">전체 Annotator</option>
+                    {ANNOTATORS.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                  <select value={dbQuery.roundNum}
+                    onChange={e => setDbQuery(prev => ({ ...prev, roundNum: e.target.value }))}
+                    style={{ padding: 6, borderRadius: 6, border: "1px solid #d1d5db", fontSize: 12 }}>
+                    <option value="">전체 Round</option>
+                    <option value="1">Round 1</option>
+                    <option value="2">Round 2</option>
+                  </select>
+                  <button onClick={() => runDbQuery(0)} className="nav-btn"
+                    style={{ background: "#4f83f3", fontSize: 12 }}>
+                    {dbQuery.loading ? "검색 중..." : "검색"}
+                  </button>
+                </div>
+                {dbQuery.data.length > 0 && (
+                  <>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
+                      총 {dbQuery.total}건 (현재 {dbQuery.data.length}건 표시)
+                    </div>
+                    <div style={{ maxHeight: 300, overflowY: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                        <thead>
+                          <tr style={{ background: "#f1f5f9" }}>
+                            <th style={{ padding: "4px 6px", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Sample ID</th>
+                            <th style={{ padding: "4px 6px", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Ann</th>
+                            <th style={{ padding: "4px 6px", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Label</th>
+                            <th style={{ padding: "4px 6px", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Q1</th>
+                            <th style={{ padding: "4px 6px", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Rnd</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dbQuery.data.map((row, i) => (
+                            <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                              <td style={{ padding: "3px 6px" }}>{row.sample_id}</td>
+                              <td style={{ padding: "3px 6px" }}>{row.annotator}</td>
+                              <td style={{ padding: "3px 6px", fontWeight: 600,
+                                color: row.final_label === "C" ? "#dc2626" : row.final_label === "M" ? "#d97706" : "#2563eb" }}>
+                                {row.final_label}
+                              </td>
+                              <td style={{ padding: "3px 6px" }}>{row.q1 ?? "-"}</td>
+                              <td style={{ padding: "3px 6px" }}>{row.round}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* ── 데이터 내보내기 안내 ── */}
           <h2 className="dash-section-title" style={{ marginTop: 28 }}>데이터 내보내기</h2>
           <div className="classification-guide">
@@ -353,19 +430,19 @@ function RelabelPage({ onBack, annotator: initialAnnotator, allSamples }) {
       alert("✅ 재라벨링 제출 완료!");
       setSubmittedR2(prev => new Set([...prev, selectedSample]));
       await fetchRelabelList();
-      const nextUnsubmitted = relabelDetails.find(
-        d => d.sample_id !== selectedSample && !submittedR2.has(d.sample_id)
-      );
-      if (nextUnsubmitted) {
-        await selectSample(nextUnsubmitted.sample_id);
-      } else {
-        setSelectedSample(null); setSampleData(null); setLabel("");
-      }
+      if (annotator) await fetchSubmittedR2(annotator);
     } catch (err) {
       console.error(err); alert("제출 실패");
     }
   };
 
+  // 진행 중 vs 완료 분리
+  const pendingItems = relabelDetails.filter(
+    d => d.status === "needs_relabeling" || d.status === "relabeling_in_progress"
+  );
+  const completedItems = relabelDetails.filter(
+    d => d.status === "confirmed_relabeled" || d.status === "disagreement"
+  );
   const r2DoneCount = relabelDetails.filter(d => submittedR2.has(d.sample_id)).length;
 
   return (
@@ -407,26 +484,61 @@ function RelabelPage({ onBack, annotator: initialAnnotator, allSamples }) {
             <p style={{ color: "#16a34a", fontSize: 13 }}>🎉 재라벨링이 필요한 샘플이 없습니다!</p>
           ) : (
             <div style={{ flex: 1, overflowY: "auto" }}>
-              {relabelDetails.map(d => {
-                const isSelected = selectedSample === d.sample_id;
-                const isDone = submittedR2.has(d.sample_id);
-                return (
-                  <div key={d.sample_id} onClick={() => selectSample(d.sample_id)}
-                    className={`relabel-item ${isSelected ? "active" : ""} ${isDone ? "done" : ""}`}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <div>
-                        <div style={{ fontWeight: 600, color: "#111827", fontSize: 12 }}>
-                          {isDone ? "✅" : "⬜"} {d.sample_id}
-                        </div>
-                        <div style={{ color: "#9ca3af", fontSize: 10, marginTop: 2 }}>
-                          {d.round1.map(r => `${r.annotator}(${r.label},${r.q1}${r.q1 <= 3 ? "⚠" : ""})`).join(" ")}
-                        </div>
-                        <div style={{ color: "#9ca3af", fontSize: 10 }}>R2: {d.round2_count}/3</div>
-                      </div>
-                    </div>
+              {/* ── 진행 중 ── */}
+              {pendingItems.length > 0 && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#d97706", padding: "6px 0 4px", borderBottom: "1px solid #e5e7eb", marginBottom: 4 }}>
+                    ⬜ 진행 중 ({pendingItems.length}개)
                   </div>
-                );
-              })}
+                  {pendingItems.map(d => {
+                    const isSelected = selectedSample === d.sample_id;
+                    const isDone = submittedR2.has(d.sample_id);
+                    return (
+                      <div key={d.sample_id} onClick={() => selectSample(d.sample_id)}
+                        className={`relabel-item ${isSelected ? "active" : ""} ${isDone ? "done" : ""}`}>
+                        <div>
+                          <div style={{ fontWeight: 600, color: "#111827", fontSize: 12 }}>
+                            {isDone ? "✅" : "⬜"} {d.sample_id}
+                          </div>
+                          <div style={{ color: "#9ca3af", fontSize: 10, marginTop: 2 }}>
+                            {d.round1.map(r => `${r.annotator}(${r.label},${r.q1}${r.q1 <= 3 ? "⚠" : ""})`).join(" ")}
+                          </div>
+                          <div style={{ color: "#9ca3af", fontSize: 10 }}>R2: {d.round2_count}/5</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+
+              {/* ── 완료 (5명 제출 완료) ── */}
+              {completedItems.length > 0 && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#16a34a", padding: "10px 0 4px", borderBottom: "1px solid #e5e7eb", marginBottom: 4 }}>
+                    ✅ 재라벨링 완료 ({completedItems.length}개)
+                  </div>
+                  {completedItems.map(d => {
+                    const isSelected = selectedSample === d.sample_id;
+                    const statusInfo = STATUS_LABELS[d.status] || {};
+                    return (
+                      <div key={d.sample_id} onClick={() => selectSample(d.sample_id)}
+                        className={`relabel-item ${isSelected ? "active" : ""} done`}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div>
+                            <div style={{ fontWeight: 600, color: "#111827", fontSize: 12 }}>
+                              {d.sample_id}
+                            </div>
+                            <div style={{ color: "#9ca3af", fontSize: 10, marginTop: 2 }}>R2: {d.round2_count}/5</div>
+                          </div>
+                          <span style={{ fontSize: 10, fontWeight: 600, color: statusInfo.color || "#9ca3af" }}>
+                            {statusInfo.text || d.status}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
             </div>
           )}
         </div>
@@ -496,7 +608,9 @@ function RelabelPage({ onBack, annotator: initialAnnotator, allSamples }) {
 }
 
 
-
+/* ═══════════════════════════════════════════════════════════════
+   Main App — 레이아웃 개선: 샘플을 상단에, 가이드라인은 좌측 사이드
+   ═══════════════════════════════════════════════════════════════ */
 function App() {
   const [annotator, setAnnotator] = useState(() => localStorage.getItem("annotator") || null);
   const [scores, setScores] = useState({ q1: null });
