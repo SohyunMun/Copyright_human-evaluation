@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import "./App.css";
 
@@ -77,6 +77,8 @@ function App() {
   const [allSamples, setAllSamples] = useState([]);
   const [jumpOpen, setJumpOpen] = useState(false);
   const [jumpCategory, setJumpCategory] = useState("ALL");
+  const skipCategoryReset = useRef(false);
+
 
   const loadAnnotation = useCallback(async (sampleData, ann) => {
     const a = ann ?? annotator;
@@ -149,11 +151,15 @@ function App() {
 
   // category 변경
   useEffect(() => {
+    if (skipCategoryReset.current) {
+        skipCategoryReset.current = false;
+        return;
+    }
     fetchSampleByIndex(0, category);
     fetchProgress(annotator, category);
     fetchProgressDetail(category);
     if (annotator) fetchSubmittedIndices(annotator, category);
-  }, [category]);
+}, [category]);
 
   const handleAnnotatorSelect = async (a) => {
     setAnnotator(a);
@@ -336,11 +342,19 @@ function App() {
                   size={10}
                   onChange={async (e) => {
                     const globalIdx = parseInt(e.target.value);
+                    const clickedSample = allSamples[globalIdx];
+                    const sampleCategory = clickedSample?.category || "ALL";
+
+                    // category useEffect 리셋 방지
+                    skipCategoryReset.current = true;
+                    setCategory(sampleCategory);
+
                     const data = await fetchSampleByIndex(globalIdx, "ALL");
-                    setCategory("ALL");
                     await loadAnnotation(data);
+                    fetchProgress(annotator, sampleCategory);
+                      if (annotator) fetchSubmittedIndices(annotator, sampleCategory);
                     setJumpOpen(false);
-                  }}
+                }}
                 >
                   {jumpList.map((s) => {
                     const globalIdx = allSamples.findIndex(orig => orig.sample_id === s.sample_id);
