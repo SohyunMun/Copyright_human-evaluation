@@ -553,12 +553,13 @@ def get_samples_list():
     ]
 
 @app.post("/restore")
-async def restore_annotations(data: list):
+async def restore_annotations(request: dict):
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
+        rows = request.get("data", [])
         count = 0
-        for row in data:
+        for row in rows:
             exists = cursor.execute("""
                 SELECT COUNT(*) FROM annotations
                 WHERE sample_id=? AND annotator=?
@@ -567,14 +568,14 @@ async def restore_annotations(data: list):
                 cursor.execute("""
                     UPDATE annotations SET final_label=?, q1=?
                     WHERE sample_id=? AND annotator=?
-                """, (row["final_label"], row["q1"],
+                """, (row["final_label"], int(row["q1"]),
                       row["sample_id"], row["annotator"]))
             else:
                 cursor.execute("""
                     INSERT INTO annotations (sample_id, annotator, final_label, q1)
                     VALUES (?, ?, ?, ?)
                 """, (row["sample_id"], row["annotator"],
-                      row["final_label"], row["q1"]))
+                      row["final_label"], int(row["q1"])))
             count += 1
         conn.commit()
         return {"status": "restored", "count": count}
