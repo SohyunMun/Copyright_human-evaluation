@@ -28,7 +28,9 @@ def init_db():
         sample_id TEXT,
         annotator TEXT,
         final_label TEXT,
-        q1 INTEGER
+        q1 INTEGER,
+        round INTEGER DEFAULT 1,
+        PRIMARY KEY (sample_id, annotator, round)
     )
     """)
     conn.commit()
