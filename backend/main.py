@@ -129,12 +129,15 @@ def _classify_samples(all_annotations):
     """
     각 샘플의 파이프라인 상태 분류:
       in_progress           : round-1 어노테이터 < 3
-      confirmed             : 모든 round-1 q1 >= 4  (3.1)
-      needs_relabeling      : round-1 에서 q1 <= 3 존재, round-2 미시작 (3.2)
-      relabeling_in_progress: round-2 시작 but < 3 annotators
-      confirmed_relabeled   : round-2 >= 3명 동일 라벨 (3.3)
-      disagreement          : round-2 >= 3명 but 과반 없음 (3.4)
+      confirmed             : 모든 round-1 q1 >= 4 AND 모든 final_label == LLM predicted
+      needs_relabeling      : round-1 에서 q1 <= 3 존재 또는 라벨 불일치, round-2 미시작
+      relabeling_in_progress: round-2 시작 but < 5 annotators
+      confirmed_relabeled   : round-2 5명 전원, 3명+ 동일 라벨
+      disagreement          : round-2 5명 전원 but 과반 없음
     """
+    # ── LLM predicted 라벨 매핑 (samples 테이블에서) ──
+    predicted_map = {s["sample_id"]: s.get("predicted") for s in samples}
+
     by_sample_r1 = defaultdict(list)
     by_sample_r2 = defaultdict(list)
 
@@ -162,34 +165,36 @@ def _classify_samples(all_annotations):
             continue
 
         all_high = all(q >= 4 for q in q1_scores)
-        any_low = any(q <= 3 for q in q1_scores)
 
+        # ── 핵심 변경: confirmed 판정에 라벨 일치 조건 추가 ──
         if all_high:
-            # 3.1: Round 1에서 확정
             labels = [a["final_label"] for a in r1 if a["final_label"] in ("F", "C", "M")]
-            top = Counter(labels).most_common(1)
-            confirmed_label = top[0][0] if top else None
-            results[sid] = {"status": "confirmed", "confirmed_label": confirmed_label}
+            predicted = predicted_map.get(sid)
+            all_match_llm = predicted and labels and all(l == predicted for l in labels)
 
-        elif any_low:
-            # 3.2 → 3.3 / 3.4
-            r2_anns = [a for a in r2 if a["final_label"] in ("F", "C", "M")]
-            r2_count = len(set(a["annotator"] for a in r2_anns))
+            if all_match_llm:
+                # ✅ Q1 모두 ≥4 AND 모든 라벨이 LLM과 일치 → 최종 확정
+                results[sid] = {"status": "confirmed", "confirmed_label": predicted}
+                continue
+            # ⚠️ Q1은 높지만 라벨 불일치 → 재라벨링 대상으로 전환
+            # (아래 needs_relabeling 로직으로 fall-through)
 
-            if r2_count == 0:
-                results[sid] = {"status": "needs_relabeling", "confirmed_label": None}
-            elif r2_count < 5:
-                results[sid] = {"status": "relabeling_in_progress", "confirmed_label": None}
-            else:
-                # 5명 전원 제출 완료 → 3명 이상 동일 라벨이면 확정
-                r2_labels = [a["final_label"] for a in r2_anns]
-                top = Counter(r2_labels).most_common(1)
-                if top and top[0][1] >= 3:
-                    results[sid] = {"status": "confirmed_relabeled", "confirmed_label": top[0][0]}
-                else:
-                    results[sid] = {"status": "disagreement", "confirmed_label": None}
+        # ── 재라벨링 경로 (Q1 ≤ 3 존재 OR Q1 높지만 라벨 불일치) ──
+        r2_anns = [a for a in r2 if a["final_label"] in ("F", "C", "M")]
+        r2_count = len(set(a["annotator"] for a in r2_anns))
+
+        if r2_count == 0:
+            results[sid] = {"status": "needs_relabeling", "confirmed_label": None}
+        elif r2_count < 5:
+            results[sid] = {"status": "relabeling_in_progress", "confirmed_label": None}
         else:
-            results[sid] = {"status": "in_progress", "confirmed_label": None}
+            # 5명 전원 제출 완료 → 3명 이상 동일 라벨이면 확정
+            r2_labels = [a["final_label"] for a in r2_anns]
+            top = Counter(r2_labels).most_common(1)
+            if top and top[0][1] >= 3:
+                results[sid] = {"status": "confirmed_relabeled", "confirmed_label": top[0][0]}
+            else:
+                results[sid] = {"status": "disagreement", "confirmed_label": None}
 
     return results
 
