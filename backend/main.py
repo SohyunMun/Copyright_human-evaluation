@@ -125,17 +125,31 @@ def _get_all_annotations_raw(conn):
     ]
 
 
+def _relabeling_path(r2):
+    """Round-2 어노테이션 목록으로 재라벨링 상태 결정."""
+    r2_anns = [a for a in r2 if a["final_label"] in ("F", "C", "M")]
+    r2_count = len(set(a["annotator"] for a in r2_anns))
+    if r2_count == 0:
+        return {"status": "needs_relabeling", "confirmed_label": None}
+    if r2_count < 5:
+        return {"status": "relabeling_in_progress", "confirmed_label": None}
+    # 5명 전원 제출 → 3명 이상 동일 라벨이면 확정
+    top = Counter(a["final_label"] for a in r2_anns).most_common(1)
+    if top and top[0][1] >= 3:
+        return {"status": "confirmed_relabeled", "confirmed_label": top[0][0]}
+    return {"status": "disagreement", "confirmed_label": None}
+
+
 def _classify_samples(all_annotations):
     """
-    각 샘플의 파이프라인 상태 분류:
-      in_progress           : round-1 어노테이터 < 3
-      confirmed             : 모든 round-1 q1 >= 4 AND 모든 final_label == LLM predicted
-      needs_relabeling      : round-1 에서 q1 <= 3 존재 또는 라벨 불일치, round-2 미시작
-      relabeling_in_progress: round-2 시작 but < 5 annotators
-      confirmed_relabeled   : round-2 5명 전원, 3명+ 동일 라벨
-      disagreement          : round-2 5명 전원 but 과반 없음
+    각 샘플의 파이프라인 상태 분류.
+
+    핵심 규칙:
+      ① 1명이라도 q1 <= 3 → 즉시 재라벨링 대상 (round-1 제출 수 무관)
+      ② 3명 미만 제출 & q1 이슈 없음 → in_progress
+      ③ 3명 이상 & 모두 q1 >= 4 & 모두 LLM 라벨 일치 → confirmed
+      ④ 3명 이상 & 모두 q1 >= 4 & 라벨 불일치 → 재라벨링 대상
     """
-    # ── LLM predicted 라벨 매핑 (samples 테이블에서) ──
     predicted_map = {s["sample_id"]: s.get("predicted") for s in samples}
 
     by_sample_r1 = defaultdict(list)
@@ -155,46 +169,29 @@ def _classify_samples(all_annotations):
         r1 = by_sample_r1.get(sid, [])
         r2 = by_sample_r2.get(sid, [])
 
+        q1_scores = [a["q1"] for a in r1 if a["q1"] is not None]
+
+        # ── ① 1명이라도 q1 <= 3이면 제출 수와 무관하게 즉시 재라벨링 ──
+        if any(q <= 3 for q in q1_scores):
+            results[sid] = _relabeling_path(r2)
+            continue
+
+        # ── ② round-1 제출자가 3명 미만이고 문제 없음 → 진행 중 ──
         if len(r1) < 3:
             results[sid] = {"status": "in_progress", "confirmed_label": None}
             continue
 
-        q1_scores = [a["q1"] for a in r1 if a["q1"] is not None]
-        if not q1_scores:
-            results[sid] = {"status": "in_progress", "confirmed_label": None}
-            continue
+        # ── ③④ 3명 이상 & 모두 q1 >= 4 ──
+        labels = [a["final_label"] for a in r1 if a["final_label"] in ("F", "C", "M")]
+        predicted = predicted_map.get(sid)
+        all_match_llm = bool(predicted and labels and all(l == predicted for l in labels))
 
-        all_high = all(q >= 4 for q in q1_scores)
-
-        # ── 핵심 변경: confirmed 판정에 라벨 일치 조건 추가 ──
-        if all_high:
-            labels = [a["final_label"] for a in r1 if a["final_label"] in ("F", "C", "M")]
-            predicted = predicted_map.get(sid)
-            all_match_llm = predicted and labels and all(l == predicted for l in labels)
-
-            if all_match_llm:
-                # ✅ Q1 모두 ≥4 AND 모든 라벨이 LLM과 일치 → 최종 확정
-                results[sid] = {"status": "confirmed", "confirmed_label": predicted}
-                continue
-            # ⚠️ Q1은 높지만 라벨 불일치 → 재라벨링 대상으로 전환
-            # (아래 needs_relabeling 로직으로 fall-through)
-
-        # ── 재라벨링 경로 (Q1 ≤ 3 존재 OR Q1 높지만 라벨 불일치) ──
-        r2_anns = [a for a in r2 if a["final_label"] in ("F", "C", "M")]
-        r2_count = len(set(a["annotator"] for a in r2_anns))
-
-        if r2_count == 0:
-            results[sid] = {"status": "needs_relabeling", "confirmed_label": None}
-        elif r2_count < 5:
-            results[sid] = {"status": "relabeling_in_progress", "confirmed_label": None}
+        if all_match_llm:
+            # ③ 확정
+            results[sid] = {"status": "confirmed", "confirmed_label": predicted}
         else:
-            # 5명 전원 제출 완료 → 3명 이상 동일 라벨이면 확정
-            r2_labels = [a["final_label"] for a in r2_anns]
-            top = Counter(r2_labels).most_common(1)
-            if top and top[0][1] >= 3:
-                results[sid] = {"status": "confirmed_relabeled", "confirmed_label": top[0][0]}
-            else:
-                results[sid] = {"status": "disagreement", "confirmed_label": None}
+            # ④ q1은 높지만 라벨 불일치 → 재라벨링
+            results[sid] = _relabeling_path(r2)
 
     return results
 
@@ -211,7 +208,6 @@ def _build_iaa_data(conn):
         if label not in ("F", "C", "M"):
             continue
         sample_dict[sample_id].append((annotator, label, q1))
-    # 3명 이상 어노테이션된 샘플만
     return {
         sid: items for sid, items in sample_dict.items()
         if len(set(a for a, _, _ in items)) >= 3
@@ -221,7 +217,7 @@ def _build_iaa_data(conn):
 def _compute_all_iaa(conn):
     filtered_dict = _build_iaa_data(conn)
     if not filtered_dict:
-        return {"fleiss_kappa": 0, "alpha_q1": 0, "icc": 0, "alpha_label": 0}   
+        return {"fleiss_kappa": 0, "alpha_q1": 0, "icc": 0, "alpha_label": 0}
     fleiss_input = [
         {"sample_id": sid, "label": label}
         for sid, items in filtered_dict.items()
@@ -231,7 +227,7 @@ def _compute_all_iaa(conn):
         "fleiss_kappa": compute_fleiss_kappa(fleiss_input),
         "alpha_q1": compute_krippendorff_alpha_q1(filtered_dict),
         "icc": compute_icc(filtered_dict, min_raters=3),
-        "alpha_label": compute_krippendorff_alpha_label(filtered_dict),   
+        "alpha_label": compute_krippendorff_alpha_label(filtered_dict),
     }
 
 
@@ -537,7 +533,6 @@ def relabeling_samples():
     try:
         all_annotations = _get_all_annotations_raw(conn)
         classification = _classify_samples(all_annotations)
-        # 모든 R2 관련 샘플 반환 (완료된 것도 포함)
         target_statuses = {
             "needs_relabeling", "relabeling_in_progress",
             "confirmed_relabeled", "disagreement",
@@ -548,7 +543,6 @@ def relabeling_samples():
             if info["status"] in target_statuses
         )
 
-        # round-1 상세 정보 첨부
         detail = []
         for sid in target_ids:
             r1_anns = [
@@ -569,7 +563,6 @@ def relabeling_samples():
                 "round2_count": len(set(a["annotator"] for a in r2_anns)),
             })
 
-        # sample_ids 는 기존 호환
         return {
             "sample_ids": list(target_ids),
             "details": detail,
@@ -640,7 +633,6 @@ def admin_dashboard():
             info["status"] for info in classification.values()
         ))
 
-        # Disagreement 샘플 목록
         disagreement_list = [
             sid for sid, info in classification.items()
             if info["status"] == "disagreement"
@@ -673,10 +665,6 @@ def db_query(
     limit: int = 200,
     offset: int = 0,
 ):
-    """
-    DB 직접 조회 — 필터 조건에 맞는 어노테이션 반환.
-    전체 건수(total)와 포맷된 결과를 함께 리턴.
-    """
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
@@ -810,17 +798,9 @@ def export_csv():
 # ─────────────────────────────────────────────
 
 def _build_classified_rows(conn):
-    """
-    샘플별 분류 결과를 1행으로 정리.
-    Returns list of dicts:
-      sample_id, category, status, confirmed_label,
-      r1_annotators, r1_labels, r1_q1_scores,
-      r2_annotators, r2_labels
-    """
     all_annotations = _get_all_annotations_raw(conn)
     classification = _classify_samples(all_annotations)
 
-    # 샘플별 어노테이션 그룹핑
     by_sample_r1 = defaultdict(list)
     by_sample_r2 = defaultdict(list)
     for ann in all_annotations:
@@ -829,7 +809,6 @@ def _build_classified_rows(conn):
         else:
             by_sample_r1[ann["sample_id"]].append(ann)
 
-    # 샘플 카테고리 매핑
     sample_cat = {s["sample_id"]: s["category"] for s in samples}
 
     rows = []
@@ -854,7 +833,6 @@ def _build_classified_rows(conn):
 
 @app.get("/export/classified_csv")
 def export_classified_csv():
-    """샘플별 분류 결과 CSV — 샘플당 1행, 상태/확정라벨 포함"""
     conn = get_db_conn()
     try:
         rows = _build_classified_rows(conn)
@@ -885,7 +863,6 @@ def export_classified_csv():
 
 @app.get("/export/classified_json")
 def export_classified_json():
-    """샘플별 분류 결과 JSON — 샘플당 1객체, 상태/확정라벨 포함"""
     conn = get_db_conn()
     try:
         rows = _build_classified_rows(conn)
