@@ -333,25 +333,52 @@ function AdminPage({ onBack }) {
             )}
           </div>
 
-          {/* ── 데이터 내보내기 안내 ── */}
+          {/* ── 데이터 내보내기 ── */}
           <h2 className="dash-section-title" style={{ marginTop: 28 }}>데이터 내보내기</h2>
-          <div className="classification-guide">
-            <div>내보내기 파일에는 <strong>Round 1 + Round 2</strong> 어노테이션이 모두 포함됩니다.</div>
-            <div style={{ marginTop: 4 }}>
-              CSV 컬럼: <code>sample_id, annotator, final_label, q1, round</code>
+
+          {/* 1) 분류 결과 (샘플당 1행) */}
+          <div className="classification-guide" style={{ marginBottom: 12 }}>
+            <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 12, color: "#111827" }}>
+              📊 분류 결과 내보내기 (샘플당 1행)
             </div>
-            <div style={{ marginTop: 4 }}>
-              • Round 1: q1 = 1~5, round = 1
-              <br/>• Round 2: q1 = null (재라벨링은 라벨만), round = 2
+            <div>각 샘플의 <strong>status</strong>와 <strong>confirmed_label</strong>이 포함됩니다.</div>
+            <div style={{ marginTop: 4, fontSize: 11, color: "#6b7280" }}>
+              컬럼: sample_id, category, <strong>status</strong>, <strong>confirmed_label</strong>, r1_labels, r1_q1_scores, r2_labels
+            </div>
+            <div style={{ marginTop: 4, fontSize: 11 }}>
+              • <span style={{ color: "#16a34a", fontWeight: 600 }}>confirmed</span> = R1에서 확정 (Q1 모두 ≥4)
+              &nbsp;• <span style={{ color: "#22c55e", fontWeight: 600 }}>confirmed_relabeled</span> = R2에서 확정 (3명+ 동일)
+              &nbsp;• <span style={{ color: "#dc2626", fontWeight: 600 }}>disagreement</span> = 합의 실패 → Expert 필요
+            </div>
+            <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+              <a href={`${BASE_URL}/export/classified_csv`} download className="nav-btn"
+                 style={{ textDecoration: "none", background: "#059669", fontSize: 12, padding: "6px 12px" }}>
+                📥 분류결과 CSV
+              </a>
+              <a href={`${BASE_URL}/export/classified_json`} download className="nav-btn"
+                 style={{ textDecoration: "none", background: "#059669", fontSize: 12, padding: "6px 12px" }}>
+                📥 분류결과 JSON
+              </a>
+            </div>
+          </div>
+
+          {/* 2) Raw 어노테이션 */}
+          <div className="classification-guide">
+            <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 12, color: "#111827" }}>
+              🗂️ Raw 어노테이션 (어노테이터별 개별 행)
+            </div>
+            <div>Round 1 + Round 2 모든 개별 어노테이션이 포함됩니다.</div>
+            <div style={{ marginTop: 4, fontSize: 11, color: "#6b7280" }}>
+              컬럼: sample_id, annotator, final_label, q1, round
             </div>
             <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
               <a href={`${BASE_URL}/export/csv`} download className="nav-btn"
-                 style={{ textDecoration: "none", background: "#059669", fontSize: 12, padding: "6px 12px" }}>
-                📥 CSV
+                 style={{ textDecoration: "none", background: "#374151", fontSize: 12, padding: "6px 12px" }}>
+                📥 Raw CSV
               </a>
               <a href={`${BASE_URL}/export/json`} download className="nav-btn"
-                 style={{ textDecoration: "none", background: "#7c3aed", fontSize: 12, padding: "6px 12px" }}>
-                📥 JSON
+                 style={{ textDecoration: "none", background: "#374151", fontSize: 12, padding: "6px 12px" }}>
+                📥 Raw JSON
               </a>
             </div>
           </div>
