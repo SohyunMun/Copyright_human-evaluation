@@ -79,6 +79,10 @@ function App() {
   const [jumpCategory, setJumpCategory] = useState("ALL");
   const skipCategoryReset = useRef(false);
 
+  const resetState = () => {
+    setScores({ q1: null });
+    setLabel("");
+  };
 
   const loadAnnotation = useCallback(async (sampleData, ann) => {
     const a = ann ?? annotator;
@@ -96,23 +100,28 @@ function App() {
     setSubmittedIndices(new Set(res.data.submitted_indices));
   }, []);
 
-  const fetchSampleByIndex = useCallback(async (idx, cat = category) => {
-    const res = await axios.get(`${BASE_URL}/sample?index=${idx}&category=${cat}`);
+  // cat을 항상 명시적으로 받아서 stale closure 방지
+  const fetchSampleByIndex = useCallback(async (idx, cat) => {
+    const useCat = cat ?? "ALL";
+    const res = await axios.get(`${BASE_URL}/sample?index=${idx}&category=${useCat}`);
     const data = res.data;
     setSample(data);
     setCurrentStep(data.current_index);
     setTotal(data.total);
     setCurrentIndex(idx);
     return data;
-  }, [category]);
+  }, []);
 
-  const fetchProgress = useCallback(async (ann = annotator, cat = category) => {
-    const res = await axios.get(`${BASE_URL}/progress?annotator=${ann || ""}&category=${cat}`);
+  const fetchProgress = useCallback(async (ann, cat) => {
+    const useAnn = ann ?? annotator ?? "";
+    const useCat = cat ?? category ?? "ALL";
+    const res = await axios.get(`${BASE_URL}/progress?annotator=${useAnn}&category=${useCat}`);
     setProgress(res.data);
   }, [annotator, category]);
 
-  const fetchProgressDetail = useCallback(async (cat = category) => {
-    const res = await axios.get(`${BASE_URL}/progress_detail?category=${cat}`);
+  const fetchProgressDetail = useCallback(async (cat) => {
+    const useCat = cat ?? category ?? "ALL";
+    const res = await axios.get(`${BASE_URL}/progress_detail?category=${useCat}`);
     setProgressDetail(res.data);
   }, [category]);
 
@@ -126,12 +135,11 @@ function App() {
     setAllSamples(res.data);
   }, []);
 
-  // 초기 로드 — localStorage에 저장된 annotator 복원
+  // 초기 로드
   useEffect(() => {
     const savedAnnotator = localStorage.getItem("annotator");
-
     fetchIAA();
-    fetchProgressDetail();
+    fetchProgressDetail("ALL");
     fetchAllSamples();
 
     if (savedAnnotator) {
@@ -145,21 +153,21 @@ function App() {
           });
         });
     } else {
-      fetchSampleByIndex(0);
+      fetchSampleByIndex(0, "ALL");
     }
   }, []);
 
-  // category 변경
+  // category 버튼 클릭 시
   useEffect(() => {
     if (skipCategoryReset.current) {
-        skipCategoryReset.current = false;
-        return;
+      skipCategoryReset.current = false;
+      return;
     }
     fetchSampleByIndex(0, category);
     fetchProgress(annotator, category);
     fetchProgressDetail(category);
     if (annotator) fetchSubmittedIndices(annotator, category);
-}, [category]);
+  }, [category]);
 
   const handleAnnotatorSelect = async (a) => {
     setAnnotator(a);
@@ -175,20 +183,15 @@ function App() {
   const nextSample = async () => {
     if (currentStep >= total) return;
     const nextIdx = currentIndex + 1;
-    const data = await fetchSampleByIndex(nextIdx);
+    const data = await fetchSampleByIndex(nextIdx, category);
     await loadAnnotation(data);
   };
 
   const prevSample = async () => {
     if (currentStep <= 1) return;
     const prevIdx = currentIndex - 1;
-    const data = await fetchSampleByIndex(prevIdx);
+    const data = await fetchSampleByIndex(prevIdx, category);
     await loadAnnotation(data);
-  };
-
-  const resetState = () => {
-    setScores({ q1: null });
-    setLabel("");
   };
 
   const setScore = (key, value) => setScores({ ...scores, [key]: value });
@@ -203,7 +206,7 @@ function App() {
         q1: scores.q1,
         final_label: label
       });
-      fetchProgress();
+      fetchProgress(annotator, category);
       fetchProgressDetail(category);
       fetchSubmittedIndices(annotator, category);
       fetchIAA();
@@ -218,6 +221,7 @@ function App() {
     }
   };
 
+  // 점프 목록
   const jumpList = jumpCategory === "ALL"
     ? allSamples
     : allSamples.filter(s => s.category === jumpCategory);
@@ -343,22 +347,35 @@ function App() {
                   onChange={async (e) => {
                     const globalIdx = parseInt(e.target.value);
                     const clickedSample = allSamples[globalIdx];
-                    const sampleCategory = clickedSample?.category || "ALL";
+                    if (!clickedSample) return;
+
+                    const sampleCategory = clickedSample.category;
+
+                    // 해당 샘플의 카테고리 기준 상대 index 계산
+                    const categoryList = allSamples.filter(s => s.category === sampleCategory);
+                    const categoryIdx = categoryList.findIndex(s => s.sample_id === clickedSample.sample_id);
 
                     // category useEffect 리셋 방지
                     skipCategoryReset.current = true;
                     setCategory(sampleCategory);
 
-                    const data = await fetchSampleByIndex(globalIdx, "ALL");
+                    const data = await fetchSampleByIndex(categoryIdx, sampleCategory);
                     await loadAnnotation(data);
                     fetchProgress(annotator, sampleCategory);
-                      if (annotator) fetchSubmittedIndices(annotator, sampleCategory);
+                    fetchProgressDetail(sampleCategory);
+                    if (annotator) fetchSubmittedIndices(annotator, sampleCategory);
                     setJumpOpen(false);
-                }}
+                  }}
                 >
                   {jumpList.map((s) => {
                     const globalIdx = allSamples.findIndex(orig => orig.sample_id === s.sample_id);
-                    const isSubmitted = annotator && submittedIndices.has(globalIdx);
+                    const isSubmitted = annotator && submittedIndices.has(
+                      (() => {
+                        const cat = s.category;
+                        const catList = allSamples.filter(x => x.category === cat);
+                        return catList.findIndex(x => x.sample_id === s.sample_id);
+                      })()
+                    );
                     return (
                       <option
                         key={s.sample_id}
