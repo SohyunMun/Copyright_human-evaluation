@@ -471,14 +471,22 @@ def admin_dashboard():
 
 
 @app.get("/annotations")
-def get_all_annotations():
+def get_all_annotations(annotator: str = None):
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
-        rows = cursor.execute("""
-            SELECT sample_id, annotator, final_label, q1
-            FROM annotations ORDER BY sample_id, annotator
-        """).fetchall()
+        if annotator:
+            rows = cursor.execute("""
+                SELECT sample_id, annotator, final_label, q1
+                FROM annotations
+                WHERE annotator=?
+                ORDER BY sample_id
+            """, (annotator,)).fetchall()
+        else:
+            rows = cursor.execute("""
+                SELECT sample_id, annotator, final_label, q1
+                FROM annotations ORDER BY sample_id, annotator
+            """).fetchall()
         return [
             {"sample_id": r[0], "annotator": r[1],
              "final_label": r[2], "q1": r[3]}
@@ -489,7 +497,6 @@ def get_all_annotations():
         return []
     finally:
         conn.close()
-
 
 @app.get("/export/json")
 def export_json():
@@ -544,3 +551,35 @@ def get_samples_list():
         {"sample_id": s["sample_id"], "category": s["category"]}
         for s in samples
     ]
+
+@app.post("/restore")
+async def restore_annotations(data: list):
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        count = 0
+        for row in data:
+            exists = cursor.execute("""
+                SELECT COUNT(*) FROM annotations
+                WHERE sample_id=? AND annotator=?
+            """, (row["sample_id"], row["annotator"])).fetchone()[0]
+            if exists > 0:
+                cursor.execute("""
+                    UPDATE annotations SET final_label=?, q1=?
+                    WHERE sample_id=? AND annotator=?
+                """, (row["final_label"], row["q1"],
+                      row["sample_id"], row["annotator"]))
+            else:
+                cursor.execute("""
+                    INSERT INTO annotations (sample_id, annotator, final_label, q1)
+                    VALUES (?, ?, ?, ?)
+                """, (row["sample_id"], row["annotator"],
+                      row["final_label"], row["q1"]))
+            count += 1
+        conn.commit()
+        return {"status": "restored", "count": count}
+    except Exception as e:
+        conn.rollback()
+        return {"status": "error", "message": str(e)}
+    finally:
+        conn.close()
