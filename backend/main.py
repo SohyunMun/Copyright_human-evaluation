@@ -39,18 +39,12 @@ def get_all_samples():
     try:
         rows = cursor.execute("""
             SELECT sample_id, article_id, category, previous, target, next, predicted
-            FROM samples
-            ORDER BY rowid
+            FROM samples ORDER BY rowid
         """).fetchall()
         return [
             {
-                "sample_id": r[0],
-                "article_id": r[1],
-                "category": r[2],
-                "previous": r[3],
-                "target": r[4],
-                "next": r[5],
-                "predicted": r[6]
+                "sample_id": r[0], "article_id": r[1], "category": r[2],
+                "previous": r[3], "target": r[4], "next": r[5], "predicted": r[6],
             }
             for r in rows
         ]
@@ -69,7 +63,7 @@ def _migrate_db():
         conn.commit()
         print("DB 마이그레이션: annotations.round 컬럼 추가 완료")
     except Exception:
-        pass  # 컬럼이 이미 존재하는 경우 무시
+        pass  # 이미 존재
     finally:
         conn.close()
 
@@ -117,7 +111,6 @@ def load_annotation_from_db(sample_id: str, annotator: str, round_num: int = 1):
 # ─────────────────────────────────────────────
 
 def _get_all_annotations_raw(conn):
-    """Return all annotations as list of dicts including round."""
     cursor = conn.cursor()
     rows = cursor.execute("""
         SELECT sample_id, annotator, final_label, q1, round
@@ -125,11 +118,8 @@ def _get_all_annotations_raw(conn):
     """).fetchall()
     return [
         {
-            "sample_id": r[0],
-            "annotator": r[1],
-            "final_label": r[2],
-            "q1": r[3],
-            "round": r[4] if r[4] is not None else 1,
+            "sample_id": r[0], "annotator": r[1], "final_label": r[2],
+            "q1": r[3], "round": r[4] if r[4] is not None else 1,
         }
         for r in rows
     ]
@@ -137,15 +127,13 @@ def _get_all_annotations_raw(conn):
 
 def _classify_samples(all_annotations):
     """
-    Classify each sample according to the pipeline rules.
-
-    Status values:
-      - in_progress         : fewer than 3 round-1 annotators
-      - confirmed           : all round-1 q1 ≥ 4  (3.1)
-      - needs_relabeling    : any round-1 q1 ≤ 3, no round-2 yet  (3.2)
-      - relabeling_in_progress : round-2 started but < 3 annotators
-      - confirmed_relabeled : round-2 has ≥ 3 annotators agreeing  (3.3)
-      - disagreement        : round-2 ≥ 3 annotators but no majority  (3.4)
+    각 샘플의 파이프라인 상태 분류:
+      in_progress           : round-1 어노테이터 < 3
+      confirmed             : 모든 round-1 q1 >= 4  (3.1)
+      needs_relabeling      : round-1 에서 q1 <= 3 존재, round-2 미시작 (3.2)
+      relabeling_in_progress: round-2 시작 but < 3 annotators
+      confirmed_relabeled   : round-2 >= 3명 동일 라벨 (3.3)
+      disagreement          : round-2 >= 3명 but 과반 없음 (3.4)
     """
     by_sample_r1 = defaultdict(list)
     by_sample_r2 = defaultdict(list)
@@ -177,7 +165,7 @@ def _classify_samples(all_annotations):
         any_low = any(q <= 3 for q in q1_scores)
 
         if all_high:
-            # 3.1: Confirmed from round 1
+            # 3.1: Round 1에서 확정
             labels = [a["final_label"] for a in r1 if a["final_label"] in ("F", "C", "M")]
             top = Counter(labels).most_common(1)
             confirmed_label = top[0][0] if top else None
@@ -196,10 +184,8 @@ def _classify_samples(all_annotations):
                 r2_labels = [a["final_label"] for a in r2_anns]
                 top = Counter(r2_labels).most_common(1)
                 if top and top[0][1] >= 3:
-                    # 3.3
                     results[sid] = {"status": "confirmed_relabeled", "confirmed_label": top[0][0]}
                 else:
-                    # 3.4
                     results[sid] = {"status": "disagreement", "confirmed_label": None}
         else:
             results[sid] = {"status": "in_progress", "confirmed_label": None}
@@ -208,7 +194,7 @@ def _classify_samples(all_annotations):
 
 
 def _build_iaa_data(conn):
-    """Build sample_dict for IAA from round-1 annotations only."""
+    """Round-1 어노테이션에서 IAA 계산용 데이터 구축"""
     cursor = conn.cursor()
     rows = cursor.execute("""
         SELECT sample_id, annotator, final_label, q1 FROM annotations
@@ -219,6 +205,7 @@ def _build_iaa_data(conn):
         if label not in ("F", "C", "M"):
             continue
         sample_dict[sample_id].append((annotator, label, q1))
+    # 3명 이상 어노테이션된 샘플만
     return {
         sid: items for sid, items in sample_dict.items()
         if len(set(a for a, _, _ in items)) >= 3
@@ -242,7 +229,7 @@ def _compute_all_iaa(conn):
 
 
 # ─────────────────────────────────────────────
-#  Existing endpoints (minimally modified)
+#  기존 엔드포인트 (최소 변경)
 # ─────────────────────────────────────────────
 
 @app.get("/sample")
@@ -318,7 +305,7 @@ def submit(data: dict):
         sample_id = data["sample_id"]
         annotator = data["annotator"]
         final_label = data["final_label"]
-        q1 = data.get("q1")  # round 2 may not send q1
+        q1 = data.get("q1")
 
         exists = cursor.execute("""
             SELECT COUNT(*) FROM annotations
@@ -352,11 +339,8 @@ def submit(data: dict):
         suffix = "_r2" if round_num == 2 else ""
         file_path = os.path.join(annotator_dir, f"{safe_sample_id}{suffix}.jsonl")
         record = {
-            "sample_id": sample_id,
-            "annotator": annotator,
-            "q1": q1,
-            "final_label": final_label,
-            "round": round_num,
+            "sample_id": sample_id, "annotator": annotator,
+            "q1": q1, "final_label": final_label, "round": round_num,
         }
         existing_records = {}
         if os.path.exists(file_path):
@@ -427,15 +411,13 @@ def progress(annotator: str = None, category: str = None, round_num: int = 1):
             if category and category != "ALL":
                 done = cursor.execute("""
                     SELECT COUNT(DISTINCT a.sample_id)
-                    FROM annotations a
-                    JOIN samples s ON a.sample_id = s.sample_id
+                    FROM annotations a JOIN samples s ON a.sample_id = s.sample_id
                     WHERE a.annotator=? AND s.category=?
                       AND (a.round=? OR (a.round IS NULL AND ?=1))
                 """, (annotator, category, round_num, round_num)).fetchone()[0]
             else:
                 done = cursor.execute("""
-                    SELECT COUNT(DISTINCT sample_id)
-                    FROM annotations
+                    SELECT COUNT(DISTINCT sample_id) FROM annotations
                     WHERE annotator=? AND (round=? OR (round IS NULL AND ?=1))
                 """, (annotator, round_num, round_num)).fetchone()[0]
 
@@ -452,9 +434,7 @@ def progress_by_category(annotator: str):
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
-        categories = cursor.execute(
-            "SELECT DISTINCT category FROM samples"
-        ).fetchall()
+        categories = cursor.execute("SELECT DISTINCT category FROM samples").fetchall()
         result = {}
         for (cat,) in categories:
             total = cursor.execute(
@@ -462,8 +442,7 @@ def progress_by_category(annotator: str):
             ).fetchone()[0]
             done = cursor.execute("""
                 SELECT COUNT(DISTINCT a.sample_id)
-                FROM annotations a
-                JOIN samples s ON a.sample_id = s.sample_id
+                FROM annotations a JOIN samples s ON a.sample_id = s.sample_id
                 WHERE a.annotator=? AND s.category=?
                   AND (a.round IS NULL OR a.round = 1)
             """, (annotator, cat)).fetchone()[0]
@@ -498,8 +477,7 @@ def progress_detail(category: str = "ALL"):
             else:
                 done = cursor.execute("""
                     SELECT COUNT(DISTINCT a.sample_id)
-                    FROM annotations a
-                    JOIN samples s ON a.sample_id = s.sample_id
+                    FROM annotations a JOIN samples s ON a.sample_id = s.sample_id
                     WHERE a.annotator=? AND s.category=?
                       AND (a.round IS NULL OR a.round = 1)
                 """, (a, category)).fetchone()[0]
@@ -525,20 +503,11 @@ def get_iaa():
 
 
 # ─────────────────────────────────────────────
-#  NEW: Sample classification endpoints
+#  샘플 분류 엔드포인트
 # ─────────────────────────────────────────────
 
 @app.get("/sample_classification")
 def sample_classification():
-    """
-    Returns per-sample status based on the annotation pipeline:
-      confirmed           → all round-1 q1 ≥ 4  (3.1)
-      needs_relabeling    → any round-1 q1 ≤ 3, round-2 not yet started  (3.2)
-      relabeling_in_progress → round-2 started, <3 annotators
-      confirmed_relabeled → round-2 ≥3 annotators agree  (3.3)
-      disagreement        → round-2 ≥3 annotators, no majority  (3.4)
-      in_progress         → <3 round-1 annotators yet
-    """
     conn = get_db_conn()
     try:
         all_annotations = _get_all_annotations_raw(conn)
@@ -553,32 +522,56 @@ def sample_classification():
 @app.get("/relabeling_samples")
 def relabeling_samples():
     """
-    Returns list of sample_ids that need re-labeling (round 2).
-    Includes 'needs_relabeling' and 'relabeling_in_progress' statuses.
+    재라벨링이 필요한 샘플 목록 반환.
+    needs_relabeling + relabeling_in_progress 상태의 샘플을 포함하며,
+    각 샘플의 round-1 어노테이션 정보(annotator, label, q1)도 함께 반환.
     """
     conn = get_db_conn()
     try:
         all_annotations = _get_all_annotations_raw(conn)
         classification = _classify_samples(all_annotations)
         target_statuses = {"needs_relabeling", "relabeling_in_progress"}
-        return {
-            "sample_ids": [
-                sid for sid, info in classification.items()
-                if info["status"] in target_statuses
+
+        target_ids = set(
+            sid for sid, info in classification.items()
+            if info["status"] in target_statuses
+        )
+
+        # round-1 상세 정보 첨부
+        detail = []
+        for sid in target_ids:
+            r1_anns = [
+                a for a in all_annotations
+                if a["sample_id"] == sid and a["round"] == 1
             ]
+            r2_anns = [
+                a for a in all_annotations
+                if a["sample_id"] == sid and a["round"] == 2
+            ]
+            detail.append({
+                "sample_id": sid,
+                "status": classification[sid]["status"],
+                "round1": [
+                    {"annotator": a["annotator"], "label": a["final_label"], "q1": a["q1"]}
+                    for a in r1_anns
+                ],
+                "round2_count": len(set(a["annotator"] for a in r2_anns)),
+            })
+
+        # sample_ids 는 기존 호환
+        return {
+            "sample_ids": list(target_ids),
+            "details": detail,
         }
     except Exception as e:
         print(f"relabeling_samples 오류: {e}")
-        return {"sample_ids": []}
+        return {"sample_ids": [], "details": []}
     finally:
         conn.close()
 
 
 @app.get("/classification_summary")
 def classification_summary():
-    """
-    Returns aggregated counts for each status category.
-    """
     conn = get_db_conn()
     try:
         all_annotations = _get_all_annotations_raw(conn)
@@ -600,7 +593,6 @@ def admin_dashboard():
         annotators = ["A", "B", "C", "D", "E"]
         total = cursor.execute("SELECT COUNT(*) FROM samples").fetchone()[0]
 
-        # Round-1 progress per annotator
         progress_data = {}
         for a in annotators:
             done = cursor.execute("""
@@ -608,14 +600,11 @@ def admin_dashboard():
                 WHERE annotator=? AND (round IS NULL OR round = 1)
             """, (a,)).fetchone()[0]
             progress_data[a] = {
-                "done": done,
-                "total": total,
-                "percent": round(done / total * 100, 1) if total else 0
+                "done": done, "total": total,
+                "percent": round(done / total * 100, 1) if total else 0,
             }
 
-        categories = cursor.execute(
-            "SELECT DISTINCT category FROM samples"
-        ).fetchall()
+        categories = cursor.execute("SELECT DISTINCT category FROM samples").fetchall()
         category_data = {}
         for (cat,) in categories:
             cat_total = cursor.execute(
@@ -625,8 +614,7 @@ def admin_dashboard():
             for a in annotators:
                 done = cursor.execute("""
                     SELECT COUNT(DISTINCT a.sample_id)
-                    FROM annotations a
-                    JOIN samples s ON a.sample_id = s.sample_id
+                    FROM annotations a JOIN samples s ON a.sample_id = s.sample_id
                     WHERE a.annotator=? AND s.category=?
                       AND (a.round IS NULL OR a.round = 1)
                 """, (a, cat)).fetchone()[0]
@@ -635,10 +623,17 @@ def admin_dashboard():
 
         iaa = _compute_all_iaa(conn)
 
-        # Classification summary
         all_annotations = _get_all_annotations_raw(conn)
         classification = _classify_samples(all_annotations)
-        classification_counts = dict(Counter(info["status"] for info in classification.values()))
+        classification_counts = dict(Counter(
+            info["status"] for info in classification.values()
+        ))
+
+        # Disagreement 샘플 목록
+        disagreement_list = [
+            sid for sid, info in classification.items()
+            if info["status"] == "disagreement"
+        ]
 
         return {
             "total_samples": total,
@@ -646,15 +641,14 @@ def admin_dashboard():
             "category_progress": category_data,
             "iaa": iaa,
             "classification": classification_counts,
+            "disagreement_samples": disagreement_list,
         }
     except Exception as e:
         print(f"admin 오류: {e}")
         return {
-            "total_samples": 0,
-            "progress": {},
-            "category_progress": {},
+            "total_samples": 0, "progress": {}, "category_progress": {},
             "iaa": {"fleiss_kappa": 0, "alpha_q1": 0, "icc": 0},
-            "classification": {},
+            "classification": {}, "disagreement_samples": [],
         }
     finally:
         conn.close()
@@ -668,8 +662,7 @@ def get_all_annotations(annotator: str = None):
         if annotator:
             rows = cursor.execute("""
                 SELECT sample_id, annotator, final_label, q1, round
-                FROM annotations WHERE annotator=?
-                ORDER BY sample_id
+                FROM annotations WHERE annotator=? ORDER BY sample_id
             """, (annotator,)).fetchall()
         else:
             rows = cursor.execute("""
@@ -678,11 +671,8 @@ def get_all_annotations(annotator: str = None):
             """).fetchall()
         return [
             {
-                "sample_id": r[0],
-                "annotator": r[1],
-                "final_label": r[2],
-                "q1": r[3],
-                "round": r[4] if r[4] is not None else 1,
+                "sample_id": r[0], "annotator": r[1], "final_label": r[2],
+                "q1": r[3], "round": r[4] if r[4] is not None else 1,
             }
             for r in rows
         ]
@@ -704,11 +694,8 @@ def export_json():
         """).fetchall()
         data = [
             {
-                "sample_id": r[0],
-                "annotator": r[1],
-                "final_label": r[2],
-                "q1": r[3],
-                "round": r[4] if r[4] is not None else 1,
+                "sample_id": r[0], "annotator": r[1], "final_label": r[2],
+                "q1": r[3], "round": r[4] if r[4] is not None else 1,
             }
             for r in rows
         ]
@@ -717,7 +704,7 @@ def export_json():
         output.seek(0)
         return StreamingResponse(
             output, media_type="application/json",
-            headers={"Content-Disposition": "attachment; filename=annotations.json"}
+            headers={"Content-Disposition": "attachment; filename=annotations.json"},
         )
     finally:
         conn.close()
@@ -742,7 +729,7 @@ def export_csv():
         output.seek(0)
         return StreamingResponse(
             output, media_type="text/csv",
-            headers={"Content-Disposition": "attachment; filename=annotations.csv"}
+            headers={"Content-Disposition": "attachment; filename=annotations.csv"},
         )
     finally:
         conn.close()
