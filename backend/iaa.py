@@ -169,3 +169,46 @@ def compute_icc(sample_dict, min_raters=3):
 
     icc = (MS_r - MS_e) / denom
     return float(np.clip(icc, -1.0, 1.0))
+
+# ─────────────────────────────────────────────
+#  Krippendorff Alpha  (nominal: F/C/M labels)
+# ─────────────────────────────────────────────
+def compute_krippendorff_alpha_label(sample_dict):
+    """
+    sample_dict: {sample_id: [(annotator, label, q1), ...]}
+    라벨(F/C/M)에 대해 nominal scale로 계산.
+    """
+    label_map = {"F": 1, "C": 2, "M": 3}
+    annotators = sorted(set(
+        a for items in sample_dict.values()
+        for a, _, _ in items
+    ))
+    if len(annotators) < 2:
+        return 0.0
+
+    matrix = []
+    for sample_id, items in sample_dict.items():
+        ann_dict = {a: label_map.get(l) for a, l, _ in items if l in label_map}
+        if len(ann_dict) < 2:
+            continue
+        row = [ann_dict.get(a, np.nan) for a in annotators]
+        matrix.append(row)
+
+    if len(matrix) < 2:
+        return 0.0
+
+    matrix = np.array(matrix, dtype=float).T
+    valid = matrix[~np.isnan(matrix)]
+    if len(valid) == 0:
+        return 0.0
+    if np.nanvar(valid) == 0:
+        return 1.0
+
+    try:
+        alpha = krippendorff.alpha(matrix, level_of_measurement='nominal')
+        if np.isnan(alpha) or np.isinf(alpha):
+            return 1.0
+        return float(alpha)
+    except Exception:
+        return 0.0
+
