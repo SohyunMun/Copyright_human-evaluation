@@ -151,6 +151,7 @@ function AdminPage({ onBack }) {
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
             {[
               ["Fleiss κ (Label)", adminData.iaa.fleiss_kappa, "라벨(F/C/M) 범주 일치도"],
+              ["Krippendorff α (Label)", adminData.iaa.alpha_label, "라벨(F/C/M) 일치도 (결측 강건)"],
               ["Krippendorff α (Score)", adminData.iaa.alpha_q1, "Q1 점수(1-5) 서열 일치도"],
               ["ICC(2,1) (Score)", adminData.iaa.icc, "Q1 점수 절대 일치도"],
             ].map(([lbl, val, desc]) => (
@@ -194,8 +195,8 @@ function AdminPage({ onBack }) {
               {/* 분류 기준 설명 */}
               <div className="classification-guide">
                 <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 12 }}>분류 기준 안내</div>
-                <div>• <strong>최종 확정 (R1)</strong>: Round 1에서 모든 어노테이터의 Q1 ≥ 4점</div>
-                <div>• <strong>재라벨링 필요</strong>: Round 1에서 1명 이상 Q1 ≤ 3점 → Round 2 대상</div>
+                <div>• <strong>최종 확정 (R1)</strong>: 모든 Q1 ≥ 4점 <strong>AND</strong> 모든 Final Label이 LLM 라벨과 일치</div>
+                <div>• <strong>재라벨링 필요</strong>: Q1 ≤ 3점 존재 또는 라벨이 LLM과 불일치 → Round 2 대상</div>
                 <div>• <strong>확정 (재라벨링 후)</strong>: Round 2에서 3명 이상 동일 라벨로 합의</div>
                 <div>• <strong>Disagreement</strong>: Round 2에서 3명 이상 제출했으나 합의 실패 → Expert Adjudication</div>
                 <div>• <strong>진행 중 (R1 &lt; 3명)</strong>: Round 1 어노테이터가 아직 3명 미만인 샘플</div>
@@ -326,7 +327,7 @@ function AdminPage({ onBack }) {
               컬럼: sample_id, category, <strong>status</strong>, <strong>confirmed_label</strong>, r1_labels, r1_q1_scores, r2_labels
             </div>
             <div style={{ marginTop: 4, fontSize: 11 }}>
-              • <span style={{ color: "#16a34a", fontWeight: 600 }}>confirmed</span> = R1에서 확정 (Q1 모두 ≥4)
+              • <span style={{ color: "#16a34a", fontWeight: 600 }}>confirmed</span> = R1에서 확정 (Q1 모두 ≥4 + 라벨 전원 LLM 일치)
               &nbsp;• <span style={{ color: "#22c55e", fontWeight: 600 }}>confirmed_relabeled</span> = R2에서 확정 (3명+ 동일)
               &nbsp;• <span style={{ color: "#dc2626", fontWeight: 600 }}>disagreement</span> = 합의 실패 → Expert 필요
             </div>
