@@ -799,6 +799,104 @@ def export_csv():
         conn.close()
 
 
+# ─────────────────────────────────────────────
+#  분류 결과 내보내기 (샘플당 1행)
+# ─────────────────────────────────────────────
+
+def _build_classified_rows(conn):
+    """
+    샘플별 분류 결과를 1행으로 정리.
+    Returns list of dicts:
+      sample_id, category, status, confirmed_label,
+      r1_annotators, r1_labels, r1_q1_scores,
+      r2_annotators, r2_labels
+    """
+    all_annotations = _get_all_annotations_raw(conn)
+    classification = _classify_samples(all_annotations)
+
+    # 샘플별 어노테이션 그룹핑
+    by_sample_r1 = defaultdict(list)
+    by_sample_r2 = defaultdict(list)
+    for ann in all_annotations:
+        if ann["round"] == 2:
+            by_sample_r2[ann["sample_id"]].append(ann)
+        else:
+            by_sample_r1[ann["sample_id"]].append(ann)
+
+    # 샘플 카테고리 매핑
+    sample_cat = {s["sample_id"]: s["category"] for s in samples}
+
+    rows = []
+    for sid in sorted(set(list(by_sample_r1.keys()) + list(by_sample_r2.keys()))):
+        clf = classification.get(sid, {"status": "unknown", "confirmed_label": None})
+        r1 = sorted(by_sample_r1.get(sid, []), key=lambda a: a["annotator"])
+        r2 = sorted(by_sample_r2.get(sid, []), key=lambda a: a["annotator"])
+
+        rows.append({
+            "sample_id": sid,
+            "category": sample_cat.get(sid, ""),
+            "status": clf["status"],
+            "confirmed_label": clf["confirmed_label"] or "",
+            "r1_annotators": ",".join(a["annotator"] for a in r1),
+            "r1_labels": ",".join(f"{a['annotator']}:{a['final_label']}" for a in r1),
+            "r1_q1_scores": ",".join(f"{a['annotator']}:{a['q1']}" for a in r1 if a["q1"] is not None),
+            "r2_annotators": ",".join(a["annotator"] for a in r2),
+            "r2_labels": ",".join(f"{a['annotator']}:{a['final_label']}" for a in r2),
+        })
+    return rows
+
+
+@app.get("/export/classified_csv")
+def export_classified_csv():
+    """샘플별 분류 결과 CSV — 샘플당 1행, 상태/확정라벨 포함"""
+    conn = get_db_conn()
+    try:
+        rows = _build_classified_rows(conn)
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow([
+            "sample_id", "category", "status", "confirmed_label",
+            "r1_annotators", "r1_labels", "r1_q1_scores",
+            "r2_annotators", "r2_labels",
+        ])
+        for r in rows:
+            writer.writerow([
+                r["sample_id"], r["category"], r["status"], r["confirmed_label"],
+                r["r1_annotators"], r["r1_labels"], r["r1_q1_scores"],
+                r["r2_annotators"], r["r2_labels"],
+            ])
+        output.seek(0)
+        return StreamingResponse(
+            output, media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=classified_samples.csv"},
+        )
+    except Exception as e:
+        print(f"export_classified_csv 오류: {e}")
+        return StreamingResponse(io.StringIO("error"), media_type="text/csv")
+    finally:
+        conn.close()
+
+
+@app.get("/export/classified_json")
+def export_classified_json():
+    """샘플별 분류 결과 JSON — 샘플당 1객체, 상태/확정라벨 포함"""
+    conn = get_db_conn()
+    try:
+        rows = _build_classified_rows(conn)
+        output = io.StringIO()
+        json.dump(rows, output, ensure_ascii=False, indent=2)
+        output.seek(0)
+        return StreamingResponse(
+            output, media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=classified_samples.json"},
+        )
+    except Exception as e:
+        print(f"export_classified_json 오류: {e}")
+        return StreamingResponse(io.StringIO("[]"), media_type="application/json")
+    finally:
+        conn.close()
+
+
 @app.get("/samples")
 def get_samples_list():
     return [
