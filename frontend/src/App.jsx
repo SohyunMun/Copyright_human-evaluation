@@ -88,7 +88,7 @@ function App() {
     const a = ann ?? annotator;
     if (!a || !sampleData) { resetState(); return; }
     try {
-      const res = await axios.get(`${BASE_URL}/annotation/${sampleData.sample_id}/${a}`);
+      const res = await axios.get(`${BASE_URL}/annotation`, {params: { sample_id: sampleData.sample_id, annotator: a }});
       setScores({ q1: res.data.q1 });
       setLabel(res.data.final_label || "");
     } catch { resetState(); }
