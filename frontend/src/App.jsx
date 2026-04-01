@@ -17,34 +17,29 @@ const STATUS_LABELS = {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   가이드라인 패널 — 항상 노출 (접기 없음)
-   PDF 섹션 4. Annotation Guideline (Copyright-aware)
-   PDF 섹션 5. Decision Rule
+   가이드라인 패널 — 항상 노출 (좌측 사이드바)
+   PDF 섹션 4 + 5
    ═══════════════════════════════════════════════════════════════ */
 function GuidelinePanel() {
   return (
     <div className="guideline-panel">
-      <div className="guideline-header">📖 Annotation Guideline</div>
+      <div className="guideline-header">📖 Human Evaluation Guideline</div>
       <div className="guideline-body">
 
-        {/* ── 4. Annotation Guideline (Copyright-aware) ── */}
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, color: "#111827", marginBottom: 8 }}>
-            4. Annotation Guideline (Copyright-aware)
-          </div>
+        {/* 4. Annotation Guideline */}
+        <div style={{ marginBottom: 12 }}>
+          <div className="guideline-section-title">4. Annotation Guideline (Copyright-aware)</div>
 
           <div className="guideline-label-box safe">
             <div className="guideline-label-title safe">F (Safe)</div>
             <div>표현이 아닌 정보가 핵심이며, 다양한 방식으로 재작성 가능한 문장</div>
             <div className="guideline-label-sub">→ 그대로 사용 가능</div>
           </div>
-
           <div className="guideline-label-box risky">
             <div className="guideline-label-title risky">C (Risky)</div>
             <div>표현 자체가 의미 전달에 중요한 역할을 하며, 그대로 생성 시 위험한 문장</div>
             <div className="guideline-label-sub">→ 반드시 재작성 필요</div>
           </div>
-
           <div className="guideline-label-box mixed">
             <div className="guideline-label-title mixed">M (Mixed)</div>
             <div>사실 정보와 표현 요소가 함께 존재하는 문장</div>
@@ -52,32 +47,24 @@ function GuidelinePanel() {
           </div>
         </div>
 
-        {/* ── 5. Decision Rule ── */}
+        {/* 5. Decision Rule */}
         <div>
-          <div style={{ fontWeight: 700, fontSize: 13, color: "#111827", marginBottom: 8 }}>
-            5. Decision Rule
-          </div>
-
+          <div className="guideline-section-title">5. Decision Rule</div>
           <div className="decision-rule-box">
             <div className="decision-rule-question">
               "이 문장은 <strong>표현을 바꾸지 않고 그대로 생성해야</strong> 의미가 유지되는가?"
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 12 }}>
               <div><span style={{ color: "#16a34a", fontWeight: 700 }}>NO →</span> F (표현을 바꿔도 의미 유지 가능)</div>
               <div><span style={{ color: "#dc2626", fontWeight: 700 }}>YES →</span> C (표현 자체가 핵심)</div>
               <div><span style={{ color: "#d97706", fontWeight: 700 }}>BOTH →</span> M (사실 + 표현 혼재)</div>
             </div>
           </div>
-
-          <div style={{ fontSize: 12, color: "#6b7280" }}>
-            <strong style={{ color: "#374151" }}>Q. LLM이 부여한 라벨 적절성 (Q1 점수)</strong>
-            <ul style={{ margin: "6px 0 0 16px", lineHeight: 2, paddingLeft: 0 }}>
-              <li><strong>5</strong> 매우 적절 — LLM 라벨이 위 기준과 완전히 일치</li>
-              <li><strong>4</strong> 적절 — 대체로 타당한 분류</li>
-              <li><strong>3</strong> 보통 — 어느 정도 납득 가능하지만 불확실</li>
-              <li><strong>2</strong> 부적절 — 기준과 맞지 않음</li>
-              <li><strong>1</strong> 매우 부적절 — 명백히 잘못된 분류</li>
-            </ul>
+          <div style={{ fontSize: 11, color: "#6b7280" }}>
+            <strong style={{ color: "#374151" }}>Q1 점수 기준</strong>
+            <div style={{ marginTop: 4, lineHeight: 1.7 }}>
+              5 매우 적절 · 4 적절 · 3 보통 · 2 부적절 · 1 매우 부적절
+            </div>
           </div>
         </div>
       </div>
@@ -107,22 +94,31 @@ function AdminPage({ onBack }) {
     { key: "needs_relabeling",       label: "재라벨링 필요",         color: "#d97706" },
     { key: "relabeling_in_progress", label: "재라벨링 진행 중",      color: "#f59e0b" },
     { key: "disagreement",           label: "Disagreement",         color: "#dc2626" },
-    { key: "in_progress",            label: "진행 중",               color: "#9ca3af" },
+    { key: "in_progress",            label: "진행 중 (R1 < 3명)",   color: "#9ca3af" },
   ];
 
   return (
     <div className="container">
       <div className="header">
         <h1>📊 진행도 대시보드</h1>
-        <button onClick={onBack} className="nav-btn">← 돌아가기</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          {/* 데이터 내보내기 */}
+          <a href={`${BASE_URL}/export/csv`} download className="nav-btn"
+             style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", background: "#059669" }}>
+            📥 CSV 다운로드
+          </a>
+          <a href={`${BASE_URL}/export/json`} download className="nav-btn"
+             style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", background: "#7c3aed" }}>
+            📥 JSON 다운로드
+          </a>
+          <button onClick={onBack} className="nav-btn">← 돌아가기</button>
+        </div>
       </div>
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
         <div className="card">
 
           {/* ── 전체 진행률 ── */}
-          <h2 style={{ fontSize: 16, color: "#111827", marginBottom: 16 }}>
-            전체 진행률 (총 {adminData.total_samples}개)
-          </h2>
+          <h2 className="dash-section-title">전체 진행률 (총 {adminData.total_samples}개)</h2>
           {ANNOTATORS.map(a => {
             const p = adminData.progress[a] || { done: 0, total: 1, percent: 0 };
             return (
@@ -133,7 +129,7 @@ function AdminPage({ onBack }) {
                 <div className="mini-bar" style={{ flex: 1, maxWidth: 280 }}>
                   <div className="mini-fill" style={{ width: `${p.percent}%` }} />
                 </div>
-                <span style={{ fontSize: 12, color: "#6b7280", minWidth: 120 }}>
+                <span style={{ fontSize: 12, color: "#6b7280", minWidth: 130 }}>
                   {p.done} / {p.total} ({p.percent}%)
                 </span>
               </div>
@@ -141,28 +137,47 @@ function AdminPage({ onBack }) {
           })}
 
           {/* ── IAA ── */}
-          <h2 style={{ fontSize: 16, color: "#111827", marginTop: 28, marginBottom: 12 }}>
+          <h2 className="dash-section-title" style={{ marginTop: 28 }}>
             IAA (어노테이터 간 일치도)
           </h2>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
             {[
-              ["Fleiss κ (Label)", adminData.iaa.fleiss_kappa],
-              ["Krippendorff α (Score)", adminData.iaa.alpha_q1],
-              ["ICC(2,1) (Score)", adminData.iaa.icc],
-            ].map(([lbl, val]) => (
+              ["Fleiss κ (Label)", adminData.iaa.fleiss_kappa, "라벨(F/C/M) 범주 일치도"],
+              ["Krippendorff α (Score)", adminData.iaa.alpha_q1, "Q1 점수(1-5) 서열 일치도"],
+              ["ICC(2,1) (Score)", adminData.iaa.icc, "Q1 점수 절대 일치도"],
+            ].map(([lbl, val, desc]) => (
               <div key={lbl} className="dashboard-card">
                 <div className="dashboard-metric-label">{lbl}</div>
                 <div className="dashboard-metric-value">
                   {typeof val === "number" ? val.toFixed(3) : "-"}
                 </div>
+                <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{desc}</div>
               </div>
             ))}
           </div>
+          {/* IAA 해석 가이드 */}
+          <div className="iaa-guide">
+            <div className="iaa-guide-title">📖 IAA 값 해석 기준</div>
+            <table className="iaa-table">
+              <thead>
+                <tr><th>범위</th><th>해석</th><th>의미</th></tr>
+              </thead>
+              <tbody>
+                <tr><td style={{ color: "#dc2626" }}>&lt; 0.00</td><td>일치도 없음</td><td>우연보다 못한 수준</td></tr>
+                <tr><td style={{ color: "#f59e0b" }}>0.00 – 0.20</td><td>약간의 일치</td><td>거의 일치하지 않음</td></tr>
+                <tr><td style={{ color: "#d97706" }}>0.21 – 0.40</td><td>보통 일치</td><td>가이드라인 보완 필요</td></tr>
+                <tr><td style={{ color: "#2563eb" }}>0.41 – 0.60</td><td>중간 일치</td><td>수용 가능한 수준</td></tr>
+                <tr><td style={{ color: "#16a34a" }}>0.61 – 0.80</td><td>상당한 일치</td><td>좋은 일치도</td></tr>
+                <tr><td style={{ color: "#059669", fontWeight: 700 }}>0.81 – 1.00</td><td>거의 완벽</td><td>매우 높은 일치도</td></tr>
+              </tbody>
+            </table>
+            <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 6 }}>
+              * Fleiss κ: Landis &amp; Koch (1977) 기준 · Krippendorff α: α ≥ 0.667 이상 권장 · ICC: Koo &amp; Li (2016) 기준
+            </div>
+          </div>
 
           {/* ── 샘플 분류 현황 ── */}
-          <h2 style={{ fontSize: 16, color: "#111827", marginTop: 28, marginBottom: 12 }}>
-            샘플 분류 현황
-          </h2>
+          <h2 className="dash-section-title" style={{ marginTop: 28 }}>샘플 분류 현황</h2>
           {clfTotal > 0 ? (
             <>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
@@ -185,8 +200,17 @@ function AdminPage({ onBack }) {
                   ) : null;
                 })}
               </div>
-              <div style={{ fontSize: 11, color: "#9ca3af" }}>
+              <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>
                 분류된 샘플: {clfTotal} / {adminData.total_samples}
+              </div>
+              {/* 분류 기준 설명 */}
+              <div className="classification-guide">
+                <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 12 }}>분류 기준 안내</div>
+                <div>• <strong>최종 확정 (R1)</strong>: Round 1에서 모든 어노테이터의 Q1 ≥ 4점</div>
+                <div>• <strong>재라벨링 필요</strong>: Round 1에서 1명 이상 Q1 ≤ 3점 → Round 2 대상</div>
+                <div>• <strong>확정 (재라벨링 후)</strong>: Round 2에서 3명 이상 동일 라벨로 합의</div>
+                <div>• <strong>Disagreement</strong>: Round 2에서 3명 이상 제출했으나 합의 실패 → Expert Adjudication</div>
+                <div>• <strong>진행 중 (R1 &lt; 3명)</strong>: Round 1 어노테이터가 아직 3명 미만인 샘플</div>
               </div>
             </>
           ) : (
@@ -198,9 +222,13 @@ function AdminPage({ onBack }) {
           {/* ── Disagreement 목록 ── */}
           {(adminData.disagreement_samples || []).length > 0 && (
             <>
-              <h2 style={{ fontSize: 16, color: "#dc2626", marginTop: 28, marginBottom: 8 }}>
+              <h2 className="dash-section-title" style={{ marginTop: 28, color: "#dc2626" }}>
                 ❌ Disagreement ({adminData.disagreement_samples.length}개) — Expert Adjudication 필요
               </h2>
+              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>
+                Round 2에서 3명 이상 제출했으나 동일 라벨 3표 이상을 확보하지 못한 샘플입니다.
+                <br/>연구자/전문가가 최종 라벨을 직접 결정해야 합니다.
+              </div>
               <div style={{
                 maxHeight: 200, overflowY: "auto", background: "#fef2f2",
                 borderRadius: 8, padding: 12, fontSize: 12, border: "1px solid #fecaca",
@@ -213,9 +241,7 @@ function AdminPage({ onBack }) {
           )}
 
           {/* ── 카테고리별 진행률 ── */}
-          <h2 style={{ fontSize: 16, color: "#111827", marginTop: 28, marginBottom: 12 }}>
-            카테고리별 진행률
-          </h2>
+          <h2 className="dash-section-title" style={{ marginTop: 28 }}>카테고리별 진행률</h2>
           {Object.entries(adminData.category_progress).map(([cat, data]) => (
             <div key={cat} style={{ marginBottom: 14 }}>
               <strong style={{ fontSize: 13 }}>{cat}</strong>
@@ -229,6 +255,29 @@ function AdminPage({ onBack }) {
               </div>
             </div>
           ))}
+
+          {/* ── 데이터 내보내기 안내 ── */}
+          <h2 className="dash-section-title" style={{ marginTop: 28 }}>데이터 내보내기</h2>
+          <div className="classification-guide">
+            <div>내보내기 파일에는 <strong>Round 1 + Round 2</strong> 어노테이션이 모두 포함됩니다.</div>
+            <div style={{ marginTop: 4 }}>
+              CSV 컬럼: <code>sample_id, annotator, final_label, q1, round</code>
+            </div>
+            <div style={{ marginTop: 4 }}>
+              • Round 1: q1 = 1~5, round = 1
+              <br/>• Round 2: q1 = null (재라벨링은 라벨만), round = 2
+            </div>
+            <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+              <a href={`${BASE_URL}/export/csv`} download className="nav-btn"
+                 style={{ textDecoration: "none", background: "#059669", fontSize: 12, padding: "6px 12px" }}>
+                📥 CSV
+              </a>
+              <a href={`${BASE_URL}/export/json`} download className="nav-btn"
+                 style={{ textDecoration: "none", background: "#7c3aed", fontSize: 12, padding: "6px 12px" }}>
+                📥 JSON
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -304,20 +353,16 @@ function RelabelPage({ onBack, annotator: initialAnnotator, allSamples }) {
       alert("✅ 재라벨링 제출 완료!");
       setSubmittedR2(prev => new Set([...prev, selectedSample]));
       await fetchRelabelList();
-      // 다음 미제출 샘플 자동 선택
       const nextUnsubmitted = relabelDetails.find(
         d => d.sample_id !== selectedSample && !submittedR2.has(d.sample_id)
       );
       if (nextUnsubmitted) {
         await selectSample(nextUnsubmitted.sample_id);
       } else {
-        setSelectedSample(null);
-        setSampleData(null);
-        setLabel("");
+        setSelectedSample(null); setSampleData(null); setLabel("");
       }
     } catch (err) {
-      console.error(err);
-      alert("제출 실패");
+      console.error(err); alert("제출 실패");
     }
   };
 
@@ -329,42 +374,33 @@ function RelabelPage({ onBack, annotator: initialAnnotator, allSamples }) {
         <h1>🔄 재라벨링 (Round 2)</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {annotator && (
-            <span style={{ fontSize: 12, color: "#6b7280" }}>
-              내 진행: {r2DoneCount}/{relabelDetails.length}
-            </span>
+            <span style={{ fontSize: 12, color: "#6b7280" }}>내 진행: {r2DoneCount}/{relabelDetails.length}</span>
           )}
           <button onClick={onBack} className="nav-btn">← 메인으로</button>
         </div>
       </div>
-
       <div className="main">
-        {/* ── LEFT: 재라벨링 대상 목록 ── */}
+        {/* LEFT: 목록 */}
         <div className="card relabel-list">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <h2 style={{ margin: 0, fontSize: 15, color: "#111827" }}>
               재라벨링 대상 ({relabelDetails.length}개)
             </h2>
             <button onClick={fetchRelabelList} className="nav-btn"
-              style={{ padding: "4px 10px", fontSize: 11 }}>
-              ↻ 새로고침
-            </button>
+              style={{ padding: "4px 10px", fontSize: 11 }}>↻</button>
           </div>
           <p style={{ fontSize: 11, color: "#9ca3af", margin: "0 0 10px 0" }}>
-            Round 1에서 Q1 ≤ 3을 받은 샘플입니다.
+            Round 1에서 Q1 ≤ 3을 받은 샘플
           </p>
-
-          {/* Annotator 선택 */}
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
             {ANNOTATORS.map(a => (
               <button key={a}
                 onClick={() => { setAnnotator(a); localStorage.setItem("annotator", a); }}
-                className={annotator === a ? "selected" : ""}
-                style={{ fontSize: 11, padding: "4px 10px" }}>
+                className={`annotator-chip ${annotator === a ? "active" : ""}`}>
                 {a}
               </button>
             ))}
           </div>
-
           {loading ? (
             <p style={{ color: "#9ca3af", fontSize: 13 }}>로딩 중...</p>
           ) : relabelDetails.length === 0 ? (
@@ -375,27 +411,18 @@ function RelabelPage({ onBack, annotator: initialAnnotator, allSamples }) {
                 const isSelected = selectedSample === d.sample_id;
                 const isDone = submittedR2.has(d.sample_id);
                 return (
-                  <div key={d.sample_id}
-                    onClick={() => selectSample(d.sample_id)}
+                  <div key={d.sample_id} onClick={() => selectSample(d.sample_id)}
                     className={`relabel-item ${isSelected ? "active" : ""} ${isDone ? "done" : ""}`}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <div>
                         <div style={{ fontWeight: 600, color: "#111827", fontSize: 12 }}>
                           {isDone ? "✅" : "⬜"} {d.sample_id}
                         </div>
-                        <div style={{ color: "#9ca3af", fontSize: 11, marginTop: 2 }}>
-                          {d.round1.map(r =>
-                            `${r.annotator}(${r.label},${r.q1}${r.q1 <= 3 ? "⚠" : ""})`
-                          ).join(" ")}
+                        <div style={{ color: "#9ca3af", fontSize: 10, marginTop: 2 }}>
+                          {d.round1.map(r => `${r.annotator}(${r.label},${r.q1}${r.q1 <= 3 ? "⚠" : ""})`).join(" ")}
                         </div>
-                        <div style={{ color: "#9ca3af", fontSize: 11 }}>R2: {d.round2_count}/3</div>
+                        <div style={{ color: "#9ca3af", fontSize: 10 }}>R2: {d.round2_count}/3</div>
                       </div>
-                      <span style={{
-                        fontSize: 10, fontWeight: 600,
-                        color: STATUS_LABELS[d.status]?.color || "#9ca3af",
-                      }}>
-                        {d.status === "relabeling_in_progress" ? "진행중" : "대기"}
-                      </span>
                     </div>
                   </div>
                 );
@@ -403,13 +430,12 @@ function RelabelPage({ onBack, annotator: initialAnnotator, allSamples }) {
             </div>
           )}
         </div>
-
-        {/* ── RIGHT: 선택된 샘플 상세 + 재라벨링 폼 ── */}
+        {/* RIGHT: 상세 */}
         <div className="card" style={{ flex: 1 }}>
           {!selectedSample ? (
             <div style={{ textAlign: "center", padding: "60px 20px", color: "#9ca3af" }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
-              <p style={{ fontSize: 14 }}>좌측 목록에서 재라벨링할 샘플을 선택하세요.</p>
+              <p>좌측 목록에서 재라벨링할 샘플을 선택하세요.</p>
             </div>
           ) : (
             <>
@@ -417,29 +443,21 @@ function RelabelPage({ onBack, annotator: initialAnnotator, allSamples }) {
                 <div style={{ fontSize: 11, color: "#9ca3af" }}>Sample ID</div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{selectedSample}</div>
               </div>
-
-              {/* Round 1 결과 요약 */}
               {(() => {
                 const detail = relabelDetails.find(d => d.sample_id === selectedSample);
                 return detail ? (
-                  <div style={{
-                    background: "#fffbeb", border: "1px solid #fbbf24",
-                    borderRadius: 8, padding: "10px 12px", marginBottom: 14, fontSize: 12,
-                  }}>
-                    <div style={{ fontWeight: 700, color: "#92400e", marginBottom: 4 }}>
+                  <div className="r1-summary-box">
+                    <div style={{ fontWeight: 700, color: "#92400e", marginBottom: 4, fontSize: 12 }}>
                       Round 1 결과 (Q1 ≤ 3 존재 → 재라벨링 대상)
                     </div>
                     {detail.round1.map((r, i) => (
-                      <div key={i} style={{ color: r.q1 <= 3 ? "#dc2626" : "#6b7280" }}>
-                        Annotator {r.annotator}: Label={r.label}, Q1={r.q1}
-                        {r.q1 <= 3 && " ⚠️"}
+                      <div key={i} style={{ color: r.q1 <= 3 ? "#dc2626" : "#6b7280", fontSize: 12 }}>
+                        Annotator {r.annotator}: Label={r.label}, Q1={r.q1} {r.q1 <= 3 && "⚠️"}
                       </div>
                     ))}
                   </div>
                 ) : null;
               })()}
-
-              {/* 본문 */}
               {sampleData && (
                 <div style={{ marginBottom: 16 }}>
                   <div className="meta">
@@ -454,27 +472,21 @@ function RelabelPage({ onBack, annotator: initialAnnotator, allSamples }) {
                   <p style={{ fontSize: 13, color: "#6b7280" }}>{sampleData.next || "—"}</p>
                 </div>
               )}
-
-              {/* Final Label */}
               <div style={{ marginBottom: 16 }}>
                 <p style={{ fontWeight: 600, color: "#374151", marginBottom: 8, fontSize: 14 }}>
                   Final Label <span className="required">*</span>
                   <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 400, marginLeft: 8 }}>
-                    (Round 2: Q1 없이 라벨만 선택)
+                    (Round 2: 라벨만 선택)
                   </span>
                 </p>
                 <div className="label-group">
                   {["F", "C", "M"].map(l => (
                     <button key={l} onClick={() => setLabel(l)}
-                      className={`label-btn ${label === l ? "active" : ""}`}
-                      style={{ flex: 1 }}>{l}</button>
+                      className={`label-btn ${label === l ? "active" : ""}`} style={{ flex: 1 }}>{l}</button>
                   ))}
                 </div>
               </div>
-
-              <button className="submit-btn" onClick={submitRelabel}>
-                Submit (Round 2 재라벨링)
-              </button>
+              <button className="submit-btn" onClick={submitRelabel}>Submit (Round 2)</button>
             </>
           )}
         </div>
@@ -484,9 +496,7 @@ function RelabelPage({ onBack, annotator: initialAnnotator, allSamples }) {
 }
 
 
-/* ═══════════════════════════════════════════════════════════════
-   Main App
-   ═══════════════════════════════════════════════════════════════ */
+
 function App() {
   const [annotator, setAnnotator] = useState(() => localStorage.getItem("annotator") || null);
   const [scores, setScores] = useState({ q1: null });
@@ -502,19 +512,12 @@ function App() {
   const [jumpOpen, setJumpOpen] = useState(false);
   const [jumpCategory, setJumpCategory] = useState("ALL");
   const skipCategoryReset = useRef(false);
-
-  // 페이지 라우팅
-  const [page, setPage] = useState("main"); // "main" | "admin" | "relabel"
-
-  // 샘플 분류 (status badge)
+  const [page, setPage] = useState("main");
   const [sampleClassification, setSampleClassification] = useState({});
   const [relabelCount, setRelabelCount] = useState(0);
 
   const currentStatus = sample ? (sampleClassification[sample.sample_id] || null) : null;
-
   const resetState = () => { setScores({ q1: null }); setLabel(""); };
-
-  // ── Data fetchers ──
 
   const loadAnnotation = useCallback(async (sampleData, ann) => {
     const a = ann ?? annotator;
@@ -531,9 +534,7 @@ function App() {
   const fetchSubmittedIndices = useCallback(async (ann, cat) => {
     if (!ann) return;
     try {
-      const res = await axios.get(
-        `${BASE_URL}/submitted_ids?annotator=${ann}&category=${cat}&round_num=1`
-      );
+      const res = await axios.get(`${BASE_URL}/submitted_ids?annotator=${ann}&category=${cat}&round_num=1`);
       setSubmittedIndices(new Set(res.data.submitted_indices));
     } catch { /* ignore */ }
   }, []);
@@ -541,10 +542,7 @@ function App() {
   const fetchSampleByIndex = useCallback(async (idx, cat) => {
     const res = await axios.get(`${BASE_URL}/sample?index=${idx}&category=${cat ?? "ALL"}`);
     const data = res.data;
-    setSample(data);
-    setCurrentStep(data.current_index);
-    setTotal(data.total);
-    setCurrentIndex(idx);
+    setSample(data); setCurrentStep(data.current_index); setTotal(data.total); setCurrentIndex(idx);
     return data;
   }, []);
 
@@ -556,56 +554,37 @@ function App() {
   }, [annotator, category]);
 
   const fetchAllSamples = useCallback(async () => {
-    const res = await axios.get(`${BASE_URL}/samples`);
-    setAllSamples(res.data);
+    const res = await axios.get(`${BASE_URL}/samples`); setAllSamples(res.data);
   }, []);
 
   const fetchClassification = useCallback(async () => {
-    try {
-      const res = await axios.get(`${BASE_URL}/sample_classification`);
-      setSampleClassification(res.data);
-    } catch { /* non-critical */ }
+    try { const res = await axios.get(`${BASE_URL}/sample_classification`); setSampleClassification(res.data); } catch {}
   }, []);
 
   const fetchRelabelCount = useCallback(async () => {
-    try {
-      const res = await axios.get(`${BASE_URL}/relabeling_samples`);
-      setRelabelCount((res.data.sample_ids || []).length);
-    } catch { /* non-critical */ }
+    try { const res = await axios.get(`${BASE_URL}/relabeling_samples`); setRelabelCount((res.data.sample_ids || []).length); } catch {}
   }, []);
 
-  // ── Initial load ──
   useEffect(() => {
     const saved = localStorage.getItem("annotator");
-    fetchAllSamples();
-    fetchClassification();
-    fetchRelabelCount();
+    fetchAllSamples(); fetchClassification(); fetchRelabelCount();
     if (saved) {
-      fetchProgress(saved, "ALL");
-      fetchSubmittedIndices(saved, "ALL");
+      fetchProgress(saved, "ALL"); fetchSubmittedIndices(saved, "ALL");
       axios.get(`${BASE_URL}/last_index?annotator=${saved}&category=ALL`).then(res => {
         fetchSampleByIndex(res.data.last_index, "ALL").then(data => loadAnnotation(data, saved));
       });
-    } else {
-      fetchSampleByIndex(0, "ALL");
-    }
+    } else { fetchSampleByIndex(0, "ALL"); }
   }, []);
 
-  // ── Category change ──
   useEffect(() => {
     if (skipCategoryReset.current) { skipCategoryReset.current = false; return; }
-    fetchSampleByIndex(0, category);
-    fetchProgress(annotator, category);
+    fetchSampleByIndex(0, category); fetchProgress(annotator, category);
     if (annotator) fetchSubmittedIndices(annotator, category);
   }, [category]);
 
-  // ── Handlers ──
-
   const handleAnnotatorSelect = async (a) => {
-    setAnnotator(a);
-    localStorage.setItem("annotator", a);
-    fetchProgress(a, category);
-    fetchSubmittedIndices(a, category);
+    setAnnotator(a); localStorage.setItem("annotator", a);
+    fetchProgress(a, category); fetchSubmittedIndices(a, category);
     const res = await axios.get(`${BASE_URL}/last_index?annotator=${a}&category=${category}`);
     const data = await fetchSampleByIndex(res.data.last_index, category);
     await loadAnnotation(data, a);
@@ -616,7 +595,6 @@ function App() {
     const data = await fetchSampleByIndex(currentIndex + 1, category);
     await loadAnnotation(data, annotator);
   };
-
   const prevSample = async () => {
     if (currentStep <= 1) return;
     const data = await fetchSampleByIndex(currentIndex - 1, category);
@@ -627,66 +605,41 @@ function App() {
 
   const submit = async () => {
     if (!annotator) { alert("Annotator를 선택하세요"); return; }
-    if (scores.q1 === null || label === "") {
-      alert("모든 문항(*)을 입력해야 합니다"); return;
-    }
+    if (scores.q1 === null || label === "") { alert("모든 문항(*)을 입력해야 합니다"); return; }
     try {
       await axios.post(`${BASE_URL}/submit`, {
-        sample_id: sample.sample_id, annotator,
-        q1: scores.q1, final_label: label, round: 1,
+        sample_id: sample.sample_id, annotator, q1: scores.q1, final_label: label, round: 1,
       });
-      fetchProgress(annotator, category);
-      fetchSubmittedIndices(annotator, category);
-      fetchClassification();
-      fetchRelabelCount();
-
-      if (currentStep < total) {
-        await nextSample();
-      } else {
-        const pRes = await axios.get(
-          `${BASE_URL}/progress?annotator=${annotator}&category=${category}&round_num=1`
-        );
+      fetchProgress(annotator, category); fetchSubmittedIndices(annotator, category);
+      fetchClassification(); fetchRelabelCount();
+      if (currentStep < total) { await nextSample(); }
+      else {
+        const pRes = await axios.get(`${BASE_URL}/progress?annotator=${annotator}&category=${category}&round_num=1`);
         const remaining = pRes.data.total - pRes.data.done;
         if (remaining > 0) {
-          const sRes = await axios.get(
-            `${BASE_URL}/submitted_ids?annotator=${annotator}&category=${category}&round_num=1`
-          );
+          const sRes = await axios.get(`${BASE_URL}/submitted_ids?annotator=${annotator}&category=${category}&round_num=1`);
           const sSet = new Set(sRes.data.submitted_indices);
           const first = [...Array(pRes.data.total).keys()].find(i => !sSet.has(i));
           if (window.confirm(`⚠️ 미제출 샘플이 ${remaining}개 남아있습니다!\n이동할까요?`) && first !== undefined) {
-            const data = await fetchSampleByIndex(first, category);
-            await loadAnnotation(data, annotator);
+            const data = await fetchSampleByIndex(first, category); await loadAnnotation(data, annotator);
           }
-        } else {
-          alert("🎉 모든 문항을 완료했습니다!");
-        }
+        } else { alert("🎉 모든 문항을 완료했습니다!"); }
       }
-    } catch (err) {
-      console.error(err); alert("제출 실패");
-    }
+    } catch (err) { console.error(err); alert("제출 실패"); }
   };
 
-  // Jump list
   const jumpList = jumpCategory === "ALL" ? allSamples : allSamples.filter(s => s.category === jumpCategory);
-
   const scoreDescriptions = { 5: "매우 적절함", 4: "적절함", 3: "보통", 2: "부적절함", 1: "매우 부적절함" };
+  const renderRadios = (q) => [1, 2, 3, 4, 5].map(n => (
+    <label key={n} className="radio">
+      <input type="radio" checked={scores[q] === n} onChange={() => setScore(q, n)} /> {n} : {scoreDescriptions[n]}
+    </label>
+  ));
 
-  const renderRadios = (q) =>
-    [1, 2, 3, 4, 5].map(n => (
-      <label key={n} className="radio">
-        <input type="radio" checked={scores[q] === n} onChange={() => setScore(q, n)} />
-        {n} : {scoreDescriptions[n]}
-      </label>
-    ));
-
-  // ═══ Page Router ═══
   if (page === "admin") return <AdminPage onBack={() => setPage("main")} />;
   if (page === "relabel") return (
-    <RelabelPage
-      onBack={() => { setPage("main"); fetchClassification(); fetchRelabelCount(); }}
-      annotator={annotator}
-      allSamples={allSamples}
-    />
+    <RelabelPage onBack={() => { setPage("main"); fetchClassification(); fetchRelabelCount(); }}
+      annotator={annotator} allSamples={allSamples} />
   );
   if (!sample) return null;
 
@@ -698,7 +651,6 @@ function App() {
       <div className="header">
         <h1>News Sentence Human Evaluation</h1>
         <div className="header-actions">
-          {/* 본인 진행도 */}
           {annotator && (
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ fontSize: 12, color: "#6b7280" }}>내 진행도</span>
@@ -710,16 +662,9 @@ function App() {
               </span>
             </div>
           )}
-
-          <span style={{ fontSize: 12, color: "#9ca3af" }}>
-            {currentStep} / {total}
-          </span>
-
+          <span style={{ fontSize: 12, color: "#9ca3af" }}>{currentStep} / {total}</span>
           <button onClick={() => setPage("admin")} className="nav-btn"
-            style={{ background: "#4f83f3", fontSize: 12 }}>
-            📊 대시보드
-          </button>
-
+            style={{ background: "#4f83f3", fontSize: 12 }}>📊 대시보드</button>
           <button onClick={() => setPage("relabel")} className="nav-btn"
             style={{
               background: relabelCount > 0 ? "#f59e0b" : "#e5e7eb",
@@ -728,75 +673,65 @@ function App() {
             }}>
             🔄 재라벨링
             {relabelCount > 0 && (
-              <span style={{
-                position: "absolute", top: -6, right: -6,
-                background: "#dc2626", color: "#fff", borderRadius: "50%",
-                width: 18, height: 18, fontSize: 10, fontWeight: 700,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                {relabelCount > 99 ? "99+" : relabelCount}
-              </span>
+              <span className="badge-count">{relabelCount > 99 ? "99+" : relabelCount}</span>
             )}
           </button>
         </div>
       </div>
 
-      {/* ═══ MAIN ═══ */}
-      <div className="main">
-        {/* ── LEFT: 가이드라인 + 샘플 + 네비게이션 ── */}
-        <div className="card">
-          <GuidelinePanel />
-
-          <div className="meta">
-            <div>
-              <span style={{ marginRight: 16 }}>ID: {sample.sample_id}</span>
-              <span>Article: {sample.article_id}</span>
-            </div>
-            <div className="llm-big">LLM: {sample.predicted}</div>
-          </div>
-
-          {currentStatus && (
-            <div style={{ marginBottom: 10 }}>
+      {/* ═══ 샘플 표시 영역 (전체 폭, 상단) ═══ */}
+      <div className="sample-top-card">
+        <div className="sample-top-meta">
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 13, color: "#6b7280" }}>ID: <strong style={{ color: "#111827" }}>{sample.sample_id}</strong></span>
+            <span style={{ fontSize: 13, color: "#6b7280" }}>Article: {sample.article_id}</span>
+            <span className="llm-big">LLM: {sample.predicted}</span>
+            {currentStatus && (
               <span className="status-badge" style={{
-                background: `${STATUS_LABELS[currentStatus.status]?.color}18`,
+                background: `${STATUS_LABELS[currentStatus.status]?.color}15`,
                 color: STATUS_LABELS[currentStatus.status]?.color,
               }}>
                 {STATUS_LABELS[currentStatus.status]?.text}
                 {currentStatus.confirmed_label && ` (${currentStatus.confirmed_label})`}
               </span>
-            </div>
-          )}
-
-          <p className="label">Previous Sentence</p>
-          <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6 }}>
-            {sample.previous || "이전 문장이 없습니다."}
-          </p>
-
-          <p className="label">Target Sentence</p>
-          <p className="target">{sample.target}</p>
-
-          <p className="label">Next Sentence</p>
-          <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6 }}>
-            {sample.next || "다음 문장이 없습니다."}
-          </p>
-
-          {/* ── Prev / Next (샘플 바로 아래) ── */}
-          <div className="sample-nav">
-            <button onClick={prevSample} className="nav-btn" disabled={currentStep === 1}>
-              ← Prev
-            </button>
-            <span style={{ fontSize: 12, color: "#9ca3af" }}>{currentStep} / {total}</span>
-            <button onClick={nextSample} className="nav-btn" disabled={currentStep === total}>
-              Next →
-            </button>
+            )}
+          </div>
+          {/* Nav 버튼 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={prevSample} className="nav-btn" disabled={currentStep === 1}>← Prev</button>
+            <span style={{ fontSize: 12, color: "#9ca3af", minWidth: 60, textAlign: "center" }}>
+              {currentStep}/{total}
+            </span>
+            <button onClick={nextSample} className="nav-btn" disabled={currentStep === total}>Next →</button>
           </div>
         </div>
 
-        {/* ── RIGHT: 평가 패널 ── */}
-        <div className="card">
-          <h2 style={{ margin: "0 0 14px 0", fontSize: 16, color: "#111827" }}>
-            Evaluation (Round 1)
-          </h2>
+        <div className="sample-sentences">
+          <div className="sentence-block">
+            <span className="sentence-label">Previous</span>
+            <span className="sentence-text muted">{sample.previous || "이전 문장이 없습니다."}</span>
+          </div>
+          <div className="sentence-block target-block">
+            <span className="sentence-label">Target</span>
+            <span className="sentence-text target-text">{sample.target}</span>
+          </div>
+          <div className="sentence-block">
+            <span className="sentence-label">Next</span>
+            <span className="sentence-text muted">{sample.next || "다음 문장이 없습니다."}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ 하단: 가이드라인(좌) + 평가(우) ═══ */}
+      <div className="main">
+        {/* LEFT: 가이드라인 */}
+        <div style={{ flex: "0 0 320px" }}>
+          <GuidelinePanel />
+        </div>
+
+        {/* RIGHT: 평가 패널 */}
+        <div className="card" style={{ flex: 1 }}>
+          <h2 style={{ margin: "0 0 12px 0", fontSize: 16, color: "#111827" }}>Evaluation (Round 1)</h2>
 
           {/* 카테고리 */}
           <div className="category-group">
@@ -810,72 +745,52 @@ function App() {
           <div style={{ marginBottom: 12 }}>
             <button onClick={() => setJumpOpen(!jumpOpen)} className="nav-btn"
               style={{ width: "100%", marginBottom: 6, background: "#e5e7eb", color: "#374151" }}>
-              📋 샘플 목록으로 이동 {jumpOpen ? "▲" : "▼"}
+              📋 샘플 목록 {jumpOpen ? "▲" : "▼"}
             </button>
             {jumpOpen && (
-              <div style={{
-                border: "1px solid #e5e7eb", borderRadius: 8, padding: 10, background: "#f9fafb",
-              }}>
+              <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 10, background: "#f9fafb" }}>
                 <div style={{ marginBottom: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
                   {CATEGORIES.map(c => (
                     <button key={c} onClick={() => setJumpCategory(c)}
-                      className={jumpCategory === c ? "selected" : ""}
-                      style={{ fontSize: 11, padding: "2px 6px" }}>{c}</button>
+                      className={jumpCategory === c ? "selected" : ""} style={{ fontSize: 11, padding: "2px 6px" }}>{c}</button>
                   ))}
                 </div>
-                <select
-                  style={{
-                    width: "100%", padding: 8, background: "white",
-                    color: "#111827", border: "1px solid #d1d5db",
-                    borderRadius: 6, fontSize: 12,
-                  }}
-                  size={10}
+                <select style={{ width: "100%", padding: 8, background: "white", color: "#111827",
+                  border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12 }} size={8}
                   onChange={async (e) => {
                     const globalIdx = parseInt(e.target.value);
-                    const clicked = allSamples[globalIdx];
-                    if (!clicked) return;
+                    const clicked = allSamples[globalIdx]; if (!clicked) return;
                     const cat = clicked.category;
                     const catList = allSamples.filter(s => s.category === cat);
                     const catIdx = catList.findIndex(s => s.sample_id === clicked.sample_id);
-                    skipCategoryReset.current = true;
-                    setCategory(cat);
+                    skipCategoryReset.current = true; setCategory(cat);
                     const data = await fetchSampleByIndex(catIdx, cat);
                     await loadAnnotation(data, annotator);
-                    fetchProgress(annotator, cat);
-                    if (annotator) fetchSubmittedIndices(annotator, cat);
+                    fetchProgress(annotator, cat); if (annotator) fetchSubmittedIndices(annotator, cat);
                     setJumpOpen(false);
-                  }}
-                >
+                  }}>
                   {jumpList.map(s => {
                     const globalIdx = allSamples.findIndex(o => o.sample_id === s.sample_id);
                     const clf = sampleClassification[s.sample_id];
                     const mark = clf?.status === "confirmed" || clf?.status === "confirmed_relabeled" ? "✅"
-                      : clf?.status === "needs_relabeling" ? "⚠️"
-                      : clf?.status === "disagreement" ? "❌" : "⬜";
-                    return (
-                      <option key={s.sample_id} value={globalIdx}>
-                        {mark} {s.sample_id}
-                      </option>
-                    );
+                      : clf?.status === "needs_relabeling" ? "⚠️" : clf?.status === "disagreement" ? "❌" : "⬜";
+                    return <option key={s.sample_id} value={globalIdx}>{mark} {s.sample_id}</option>;
                   })}
                 </select>
-                <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 4 }}>
-                  ✅ 확정 &nbsp; ⚠️ 재라벨링 &nbsp; ❌ Disagreement &nbsp; ⬜ 미분류
-                </p>
               </div>
             )}
           </div>
 
-          {/* Annotator */}
-          <div className="annotator" style={{ marginBottom: 14 }}>
+          {/* Annotator — 선택 강조 개선 */}
+          <div style={{ marginBottom: 14 }}>
             <p style={{ fontWeight: 600, fontSize: 14, color: "#374151", marginBottom: 6 }}>
               Annotator <span className="required">*</span>
             </p>
             <div className="annotator-group">
               {ANNOTATORS.map(a => (
                 <button key={a} onClick={() => handleAnnotatorSelect(a)}
-                  className={annotator === a ? "selected" : ""}>
-                  {a}
+                  className={`annotator-chip ${annotator === a ? "active" : ""}`}>
+                  Annotator {a}
                 </button>
               ))}
             </div>
@@ -887,9 +802,7 @@ function App() {
               marginBottom: 10, fontSize: 12, fontWeight: 600,
               color: submittedIndices.has(currentIndex) ? "#16a34a" : "#9ca3af",
             }}>
-              {submittedIndices.has(currentIndex)
-                ? "✅ 이미 제출한 샘플입니다"
-                : "⬜ 미제출 샘플입니다"}
+              {submittedIndices.has(currentIndex) ? "✅ 이미 제출한 샘플입니다" : "⬜ 미제출 샘플입니다"}
             </div>
           )}
 
