@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from iaa import compute_fleiss_kappa, compute_krippendorff_alpha_q1, compute_icc
+from iaa import compute_fleiss_kappa, compute_krippendorff_alpha_q1, compute_icc, compute_krippendorff_alpha_label
 from database import init_db, get_db
 import os
 import json
@@ -221,7 +221,7 @@ def _build_iaa_data(conn):
 def _compute_all_iaa(conn):
     filtered_dict = _build_iaa_data(conn)
     if not filtered_dict:
-        return {"fleiss_kappa": 0, "alpha_q1": 0, "icc": 0}
+        return {"fleiss_kappa": 0, "alpha_q1": 0, "icc": 0, "alpha_label": 0}   
     fleiss_input = [
         {"sample_id": sid, "label": label}
         for sid, items in filtered_dict.items()
@@ -231,6 +231,7 @@ def _compute_all_iaa(conn):
         "fleiss_kappa": compute_fleiss_kappa(fleiss_input),
         "alpha_q1": compute_krippendorff_alpha_q1(filtered_dict),
         "icc": compute_icc(filtered_dict, min_raters=3),
+        "alpha_label": compute_krippendorff_alpha_label(filtered_dict),   
     }
 
 
