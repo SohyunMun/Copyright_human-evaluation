@@ -163,26 +163,6 @@ function AdminPage({ onBack }) {
               </div>
             ))}
           </div>
-          {/* IAA 해석 가이드 */}
-          <div className="iaa-guide">
-            <div className="iaa-guide-title">📖 IAA 값 해석 기준</div>
-            <table className="iaa-table">
-              <thead>
-                <tr><th>범위</th><th>해석</th><th>의미</th></tr>
-              </thead>
-              <tbody>
-                <tr><td style={{ color: "#dc2626" }}>&lt; 0.00</td><td>일치도 없음</td><td>우연보다 못한 수준</td></tr>
-                <tr><td style={{ color: "#f59e0b" }}>0.00 – 0.20</td><td>약간의 일치</td><td>거의 일치하지 않음</td></tr>
-                <tr><td style={{ color: "#d97706" }}>0.21 – 0.40</td><td>보통 일치</td><td>가이드라인 보완 필요</td></tr>
-                <tr><td style={{ color: "#2563eb" }}>0.41 – 0.60</td><td>중간 일치</td><td>수용 가능한 수준</td></tr>
-                <tr><td style={{ color: "#16a34a" }}>0.61 – 0.80</td><td>상당한 일치</td><td>좋은 일치도</td></tr>
-                <tr><td style={{ color: "#059669", fontWeight: 700 }}>0.81 – 1.00</td><td>거의 완벽</td><td>매우 높은 일치도</td></tr>
-              </tbody>
-            </table>
-            <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 6 }}>
-              * Fleiss κ: Landis &amp; Koch (1977) 기준 · Krippendorff α: α ≥ 0.667 이상 권장 · ICC: Koo &amp; Li (2016) 기준
-            </div>
-          </div>
 
           {/* ── 샘플 분류 현황 ── */}
           <h2 className="dash-section-title" style={{ marginTop: 28 }}>샘플 분류 현황</h2>
