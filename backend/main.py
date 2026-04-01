@@ -178,9 +178,10 @@ def _classify_samples(all_annotations):
 
             if r2_count == 0:
                 results[sid] = {"status": "needs_relabeling", "confirmed_label": None}
-            elif r2_count < 3:
+            elif r2_count < 5:
                 results[sid] = {"status": "relabeling_in_progress", "confirmed_label": None}
             else:
+                # 5명 전원 제출 완료 → 3명 이상 동일 라벨이면 확정
                 r2_labels = [a["final_label"] for a in r2_anns]
                 top = Counter(r2_labels).most_common(1)
                 if top and top[0][1] >= 3:
@@ -530,7 +531,11 @@ def relabeling_samples():
     try:
         all_annotations = _get_all_annotations_raw(conn)
         classification = _classify_samples(all_annotations)
-        target_statuses = {"needs_relabeling", "relabeling_in_progress"}
+        # 모든 R2 관련 샘플 반환 (완료된 것도 포함)
+        target_statuses = {
+            "needs_relabeling", "relabeling_in_progress",
+            "confirmed_relabeled", "disagreement",
+        }
 
         target_ids = set(
             sid for sid, info in classification.items()
@@ -650,6 +655,65 @@ def admin_dashboard():
             "iaa": {"fleiss_kappa": 0, "alpha_q1": 0, "icc": 0},
             "classification": {}, "disagreement_samples": [],
         }
+    finally:
+        conn.close()
+
+
+@app.get("/db_query")
+def db_query(
+    sample_id: str = None,
+    annotator: str = None,
+    round_num: int = None,
+    limit: int = 200,
+    offset: int = 0,
+):
+    """
+    DB 직접 조회 — 필터 조건에 맞는 어노테이션 반환.
+    전체 건수(total)와 포맷된 결과를 함께 리턴.
+    """
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        where_clauses = []
+        params = []
+        if sample_id:
+            where_clauses.append("sample_id LIKE ?")
+            params.append(f"%{sample_id}%")
+        if annotator:
+            where_clauses.append("annotator = ?")
+            params.append(annotator)
+        if round_num is not None:
+            where_clauses.append("(round = ? OR (round IS NULL AND ? = 1))")
+            params.extend([round_num, round_num])
+
+        where_sql = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+        total = cursor.execute(
+            f"SELECT COUNT(*) FROM annotations{where_sql}", params
+        ).fetchone()[0]
+
+        rows = cursor.execute(f"""
+            SELECT sample_id, annotator, final_label, q1, round
+            FROM annotations{where_sql}
+            ORDER BY sample_id, annotator, round
+            LIMIT ? OFFSET ?
+        """, params + [limit, offset]).fetchall()
+
+        return {
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "data": [
+                {
+                    "sample_id": r[0], "annotator": r[1], "final_label": r[2],
+                    "q1": r[3], "round": r[4] if r[4] is not None else 1,
+                }
+                for r in rows
+            ],
+        }
+    except Exception as e:
+        print(f"db_query 오류: {e}")
+        return {"total": 0, "limit": limit, "offset": offset, "data": []}
     finally:
         conn.close()
 
