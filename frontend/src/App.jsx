@@ -322,15 +322,15 @@ function App() {
       }}>
         <div style={{ marginBottom: 6 }}>
           <span style={{ fontWeight: 700, color: "#2563eb" }}>F (Factual)</span>
-      　    실제로 일어난 일이나 수치·발표 등 확인 가능한 정보만 전달하는 문장
+      　    : 실제로 일어난 일이나 수치·발표 등 확인 가능한 정보만 전달하는 문장
         </div>
         <div style={{ marginBottom: 6 }}>
           <span style={{ fontWeight: 700, color: "#16a34a" }}>C (Creative)</span>
-      　    의견, 평가, 감정, 해석, 예측 등 사람의 생각이나 판단이 들어간 문장
+      　    : 의견, 평가, 감정, 해석, 예측 등 사람의 생각이나 판단이 들어간 문장
         </div>
         <div>
           <span style={{ fontWeight: 700, color: "#d97706" }}>M (Mixed)</span>
-      　    사실을 설명하면서 동시에 의견이나 평가, 해석도 함께 포함된 문장
+      　    : 사실을 설명하면서 동시에 의견이나 평가, 해석도 함께 포함된 문장
         </div>
       </div>
           <div className="meta">
