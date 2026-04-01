@@ -210,10 +210,35 @@ function App() {
       fetchProgressDetail(category);
       fetchSubmittedIndices(annotator, category);
       fetchIAA();
+
       if (currentStep < total) {
         await nextSample();
       } else {
-        alert("모든 문항을 완료했습니다!");
+        // 마지막 샘플 제출 시 미제출 샘플 확인
+        const progressRes = await axios.get(
+          `${BASE_URL}/progress?annotator=${annotator}&category=${category}`
+        );
+        const { done, total: tot } = progressRes.data;
+        const remaining = tot - done;
+
+        if (remaining > 0) {
+          // 미제출 샘플 있음
+          const submittedRes = await axios.get(
+            `${BASE_URL}/submitted_ids?annotator=${annotator}&category=${category}`
+          );
+          const submittedSet = new Set(submittedRes.data.submitted_indices);
+          const firstUnsubmitted = [...Array(tot).keys()].find(i => !submittedSet.has(i));
+
+          const go = window.confirm(
+            `⚠️ 아직 미제출 샘플이 ${remaining}개 남아있습니다!\n미제출 첫 번째 샘플로 이동할까요?`
+          );
+          if (go && firstUnsubmitted !== undefined) {
+            const data = await fetchSampleByIndex(firstUnsubmitted, category);
+            await loadAnnotation(data);
+          }
+        } else {
+          alert("🎉 모든 문항을 완료했습니다!");
+        }
       }
     } catch (err) {
       console.error(err);
