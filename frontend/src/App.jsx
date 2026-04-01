@@ -707,6 +707,18 @@ function App() {
     try { const res = await axios.get(`${BASE_URL}/relabeling_samples`); setRelabelCount((res.data.sample_ids || []).length); } catch {}
   }, []);
 
+  const fetchSampleByIndex = async (index, cat) => {
+    const res = await axios.get(`${BASE_URL}/sample`, {
+      params: { index, category: cat },
+    });
+    const data = res.data;
+    setSample(data);
+    setCurrentIndex(data.current_index - 1);   // 0-based (API 호출용)
+    setCurrentStep(data.current_index);          // 1-based (화면 표시용)
+    setTotal(data.total);
+    return data;
+  };
+
   useEffect(() => {
     const saved = localStorage.getItem("annotator");
     fetchAllSamples(); fetchClassification(); fetchRelabelCount();
