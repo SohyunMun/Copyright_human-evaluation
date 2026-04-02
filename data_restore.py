@@ -3,13 +3,11 @@ import requests
 import argparse
 import math
 import sys
-import json
 
 BASE_URL = "https://copyrighthuman-evaluation-production-df30.up.railway.app"
 
 
 def safe_q1(val):
-    """q1 값을 int 또는 None으로 안전하게 변환 (NaN, 빈 문자열 대응)"""
     if val is None:
         return None
     if isinstance(val, float) and math.isnan(val):
@@ -21,25 +19,18 @@ def safe_q1(val):
 
 
 def load_csv(path):
-    """CSV를 로드하고 round/q1 컬럼을 안전하게 처리"""
     df = pd.read_csv(path)
     print(f"  컬럼: {list(df.columns)}")
     print(f"  원본 행 수: {len(df)}")
 
-    # round 컬럼 없으면 기본값 1
-    if "round" not in df.columns:
-        df["round"] = 1
-        print("  → 'round' 컬럼 없음 → 모든 행을 round=1로 처리")
+    # round 컬럼 있어도 무시하고 전부 round=1로 처리
+    df["round"] = 1
 
-    df["round"] = df["round"].fillna(1).astype(int)
-
-    # q1: 숫자 변환 후 NaN → None
     df["q1"] = pd.to_numeric(df["q1"], errors="coerce")
 
-    # 빈 label/id 행 제거
     before = len(df)
-    df = df.dropna(subset=["sample_id", "annotator", "final_label"])
-    df = df[df["final_label"].isin(["F", "C", "M", "Unsure"])]
+    df = df.dropna(subset=["sample_id", "annotator"])
+    # final_label이 없는 경우도 허용 (q1>=4이면 None 가능)
     after = len(df)
     if before != after:
         print(f"  → 유효하지 않은 행 {before - after}개 제거")
@@ -48,32 +39,28 @@ def load_csv(path):
 
 
 def row_to_payload(row):
-    """DataFrame row를 JSON-safe dict로 변환"""
     return {
         "sample_id": str(row["sample_id"]),
         "annotator": str(row["annotator"]),
-        "final_label": str(row["final_label"]),
+        "final_label": row.get("final_label") if pd.notna(row.get("final_label")) else None,
         "q1": safe_q1(row["q1"]),
-        "round": int(row["round"]),
     }
 
 
 def restore_via_submit(df):
-    """개별 /submit API — 느리지만 에러 추적 용이"""
-    success = 0
-    fail = 0
+    success, fail = 0, 0
     total = len(df)
 
     for i, (_, row) in enumerate(df.iterrows()):
         payload = row_to_payload(row)
         try:
-            res = requests.post(f"{BASE_URL}/submit", json=payload, timeout=10)
+            res = requests.post(f"{BASE_URL}/submit", json={**payload, "round": 1}, timeout=10)
             result = res.json()
             if result.get("status") == "saved":
                 success += 1
             else:
                 fail += 1
-                print(f"  ❌ {payload['sample_id']} R{payload['round']} - {result}")
+                print(f"  ❌ {payload['sample_id']} - {result}")
         except Exception as e:
             fail += 1
             print(f"  ❌ {payload['sample_id']} - {e}")
@@ -86,15 +73,10 @@ def restore_via_submit(df):
 
 
 def restore_via_batch(df):
-    """/restore API — 배치 전송, 빠름"""
     data = [row_to_payload(row) for _, row in df.iterrows()]
     print(f"  📤 {len(data)}개 행을 /restore API로 전송 중...")
     try:
-        res = requests.post(
-            f"{BASE_URL}/restore",
-            json={"data": data},
-            timeout=120,
-        )
+        res = requests.post(f"{BASE_URL}/restore", json={"data": data}, timeout=120)
         result = res.json()
         if result.get("status") == "restored":
             return result.get("count", 0), 0
@@ -120,22 +102,15 @@ def main():
     except Exception as e:
         print(f"❌ CSV 로드 실패: {e}"); sys.exit(1)
 
-    # 요약
-    r1 = df[df["round"] == 1]
-    r2 = df[df["round"] == 2]
     annotators = sorted(df["annotator"].unique())
-
     print(f"\n📊 데이터 요약")
-    print(f"  전체: {len(df)}행")
-    print(f"  Round 1: {len(r1)}행  |  Round 2: {len(r2)}행")
+    print(f"  전체: {len(df)}행 (모두 Round 1)")
     print(f"  Annotators: {', '.join(annotators)}")
     print(f"  샘플 수: {df['sample_id'].nunique()}개")
-    if len(r2) > 0:
-        r2_q1_null = r2["q1"].isna().sum()
-        print(f"  Round 2 중 q1=null: {r2_q1_null}개 (정상)")
 
-    label_dist = df["final_label"].value_counts()
-    print(f"  라벨 분포: {dict(label_dist)}")
+    if "final_label" in df.columns:
+        label_dist = df["final_label"].dropna().value_counts()
+        print(f"  라벨 분포: {dict(label_dist)}")
 
     proceed = input(f"\n🔄 복원을 진행할까요? (y/n): ").strip().lower()
     if proceed != "y":
@@ -152,8 +127,7 @@ def main():
     print(f"\n{'='*40}")
     print(f"✅ 완료: 성공 {success}개 / 실패 {fail}개")
     if fail > 0:
-        print("⚠️  실패 항목은 위 로그를 확인하세요.")
-    print()
+        print("⚠️  실패 항목은 로그를 확인하세요.")
 
 
 if __name__ == "__main__":
