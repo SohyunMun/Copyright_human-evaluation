@@ -56,7 +56,7 @@ function GuidelinePanel() {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   상의 페이지
+   Disagreement Set 페이지
    ═══════════════════════════════════════════════════════════════ */
 function DiscussionPage({ onBack, allSamples }) {
   const [discussionData, setDiscussionData] = useState({ samples: [], total: 0, resolved_count: 0 });
@@ -134,7 +134,7 @@ function DiscussionPage({ onBack, allSamples }) {
       </div>
 
       <div style={{ background: "#fef9c3", border: "1px solid #fde047", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#854d0e" }}>
-        ⚠️ 아래 샘플들은 <strong>1명 이상이 1~3점을 선택</strong>하여 LLM 라벨에 동의하지 않은 경우입니다. 어노테이터끼리 상의 후 최종 라벨을 결정해주세요.
+        ⚠️ 아래 샘플들은 <strong>1명 이상이 1~3점을 선택</strong>하여 LLM 라벨에 동의하지 않은 경우입니다. 어노테이터끼리 합의 후 최종 라벨을 결정해주세요.
       </div>
 
       <div className="main">
@@ -143,7 +143,7 @@ function DiscussionPage({ onBack, allSamples }) {
           {loading ? (
             <p style={{ color: "#9ca3af" }}>로딩 중...</p>
           ) : discussionData.total === 0 ? (
-            <p style={{ color: "#16a34a" }}>🎉 상의가 필요한 샘플이 없습니다!</p>
+            <p style={{ color: "#16a34a" }}>🎉 모두 완료</p>
           ) : (
             <div style={{ overflowY: "auto" }}>
               {pendingItems.length > 0 && (
@@ -168,7 +168,7 @@ function DiscussionPage({ onBack, allSamples }) {
               {resolvedItems.length > 0 && (
                 <>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#2563eb", padding: "10px 0 4px", borderBottom: "1px solid #e5e7eb", marginBottom: 4 }}>
-                    ✅ 상의 완료 ({resolvedItems.length}개)
+                    ✅ Disagreement Resolved ({resolvedItems.length}개)
                   </div>
                   {resolvedItems.map(item => (
                     <div key={item.sample_id}
@@ -251,7 +251,7 @@ function DiscussionPage({ onBack, allSamples }) {
               {/* 최종 라벨 결정 */}
               <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, padding: 14 }}>
                 <div style={{ fontWeight: 700, color: "#1e40af", marginBottom: 10, fontSize: 13 }}>
-                  💬 상의 후 최종 라벨 결정
+                  ✅ 최종 라벨 결정 (Disagreement Resolved)
                 </div>
                 <div className="label-group" style={{ marginBottom: 10 }}>
                   {["F", "C", "M"].map(l => (
@@ -392,8 +392,8 @@ function AdminPage({ onBack }) {
               <div className="classification-guide">
                 <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 12 }}>분류 기준 안내</div>
                 <div>• <strong>확정 (4~5점)</strong>: 3명 이상이 모두 Q1 4~5점 → LLM 라벨 확정</div>
-                <div>• <strong>상의 필요</strong>: 1명이라도 Q1 1~3점 → 어노테이터 상의 필요</div>
-                <div>• <strong>상의 완료</strong>: 상의 후 최종 라벨 결정됨</div>
+                <div>• <strong>Disagreement Set</strong>: 1명이라도 Q1 1~3점 → 어노테이터 합의 필요</div>
+                <div>• <strong>Disagreement Resolved</strong>: 최종 라벨 결정됨</div>
                 <div>• <strong>진행 중</strong>: 아직 3명 미만 제출</div>
               </div>
             </>
@@ -479,9 +479,9 @@ function AdminPage({ onBack }) {
           {/* 최종 데이터셋 */}
           <div className="classification-guide" style={{ marginBottom: 12 }}>
             <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 12, color: "#111827" }}>
-              📊 최종 데이터셋 (확정 + 상의 완료 샘플)
+              📊 최종 데이터셋 (확정 + Disagreement Resolved 샘플)
             </div>
-            <div>확정 샘플과 상의 완료 샘플의 최종 라벨을 포함합니다.</div>
+            <div>확정 샘플과 합의 완료 샘플의 최종 라벨을 포함합니다.</div>
             <div style={{ marginTop: 4, fontSize: 11, color: "#6b7280" }}>
               형식: sample_id, target_sentence, label, prev_sentence, next_sentence
             </div>
@@ -725,7 +725,7 @@ function App() {
               color: discussionCount > 0 ? "#fff" : "#6b7280",
               fontSize: 12, position: "relative",
             }}>
-            💬 상의 필요
+            📋 Disagreement Set
             {discussionCount > 0 && (
               <span className="badge-count">{discussionCount > 99 ? "99+" : discussionCount}</span>
             )}
