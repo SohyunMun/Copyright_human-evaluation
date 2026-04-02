@@ -213,7 +213,6 @@ function DiscussionPage({ onBack, allSamples }) {
                       <th style={{ padding: "5px 8px", textAlign: "left" }}>Annotator</th>
                       <th style={{ padding: "5px 8px", textAlign: "center" }}>Q1 점수</th>
                       <th style={{ padding: "5px 8px", textAlign: "center" }}>선택 라벨</th>
-                      <th style={{ padding: "5px 8px", textAlign: "center" }}>LLM 동의</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -226,9 +225,6 @@ function DiscussionPage({ onBack, allSamples }) {
                         <td style={{ padding: "5px 8px", textAlign: "center", fontWeight: 700,
                           color: a.label === "C" ? "#dc2626" : a.label === "M" ? "#d97706" : "#2563eb" }}>
                           {a.label || "-"}
-                        </td>
-                        <td style={{ padding: "5px 8px", textAlign: "center" }}>
-                          {a.agreed_with_llm === null ? "-" : a.agreed_with_llm ? "✅ 동의" : "❌ 비동의"}
                         </td>
                       </tr>
                     ))}
