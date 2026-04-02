@@ -179,42 +179,78 @@ def _classify_samples(all_annotations, decisions=None):
 
 
 def _build_iaa_data(conn):
+    """
+    IAA 계산용 데이터 구축
+    - Krippendorff α (Score), ICC: 전체 샘플 Q1 점수 기반
+    - Fleiss κ, Krippendorff α (Label): Q1 <= 3인 샘플에서 어노테이터가 직접 선택한 라벨만 사용
+    """
     cursor = conn.cursor()
     rows = cursor.execute("""
         SELECT sample_id, annotator, final_label, q1 FROM annotations
         WHERE (round IS NULL OR round = 1)
     """).fetchall()
-    sample_dict = defaultdict(list)
+
+    # Q1 점수 기반 (전체)
+    score_dict = defaultdict(list)
+    # 라벨 기반 (Q1 <= 3인 샘플만, 어노테이터가 직접 선택한 라벨)
+    label_dict = defaultdict(list)
+
     for sample_id, annotator, label, q1 in rows:
-        # q1 >= 4면 LLM 라벨, q1 <= 3이면 annotator가 선택한 라벨
-        if label not in ("F", "C", "M") and q1 is not None and q1 >= 4:
-            predicted = next((s["predicted"] for s in samples if s["sample_id"] == sample_id), None)
-            if predicted in ("F", "C", "M"):
-                label = predicted
-        if label not in ("F", "C", "M"):
+        if q1 is None:
             continue
-        sample_dict[sample_id].append((annotator, label, q1))
-    return {
-        sid: items for sid, items in sample_dict.items()
+        score_dict[sample_id].append((annotator, label, q1))
+
+        # 라벨 IAA: Q1 <= 3이고 유효한 라벨이 있는 경우만
+        if q1 <= 3 and label in ("F", "C", "M"):
+            label_dict[sample_id].append((annotator, label, q1))
+
+    # 3명 이상 제출한 샘플만
+    score_filtered = {
+        sid: items for sid, items in score_dict.items()
+        if len(set(a for a, _, _ in items)) >= 3
+    }
+    label_filtered = {
+        sid: items for sid, items in label_dict.items()
         if len(set(a for a, _, _ in items)) >= 3
     }
 
+    return score_filtered, label_filtered
+
 
 def _compute_all_iaa(conn):
-    filtered_dict = _build_iaa_data(conn)
-    if not filtered_dict:
-        return {"fleiss_kappa": 0, "alpha_q1": 0, "icc": 0, "alpha_label": 0}
-    fleiss_input = [
-        {"sample_id": sid, "label": label}
-        for sid, items in filtered_dict.items()
-        for _, label, _ in items
-    ]
-    return {
-        "fleiss_kappa": compute_fleiss_kappa(fleiss_input),
-        "alpha_q1": compute_krippendorff_alpha_q1(filtered_dict),
-        "icc": compute_icc(filtered_dict, min_raters=3),
-        "alpha_label": compute_krippendorff_alpha_label(filtered_dict),
+    score_filtered, label_filtered = _build_iaa_data(conn)
+
+    result = {
+        "fleiss_kappa": 0,
+        "alpha_label": 0,
+        "alpha_q1": 0,
+        "icc": 0,
+        "label_sample_count": len(label_filtered),
+        "score_sample_count": len(score_filtered),
     }
+
+    # Q1 점수 기반 IAA (전체 샘플)
+    if score_filtered:
+        try:
+            result["alpha_q1"] = compute_krippendorff_alpha_q1(score_filtered)
+            result["icc"] = compute_icc(score_filtered, min_raters=3)
+        except Exception as e:
+            print(f"score IAA 오류: {e}")
+
+    # 라벨 기반 IAA (Q1 <= 3 샘플만)
+    if label_filtered:
+        try:
+            fleiss_input = [
+                {"sample_id": sid, "label": label}
+                for sid, items in label_filtered.items()
+                for _, label, _ in items
+            ]
+            result["fleiss_kappa"] = compute_fleiss_kappa(fleiss_input)
+            result["alpha_label"] = compute_krippendorff_alpha_label(label_filtered)
+        except Exception as e:
+            print(f"label IAA 오류: {e}")
+
+    return result
 
 
 # ─────────────────────────────────────────────
