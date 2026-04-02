@@ -170,6 +170,11 @@ def _classify_samples(all_annotations):
         r2 = by_sample_r2.get(sid, [])
 
         q1_scores = [a["q1"] for a in r1 if a["q1"] is not None]
+        
+        # q1이 하나도 없는 경우 (아직 아무도 안 했거나, 값이 비어있는 경우)
+        if not q1_scores:
+            results[sid] = {"status": "in_progress", "confirmed_label": None}
+            continue
 
         # ── ① 1명이라도 q1 <= 3이면 제출 수와 무관하게 즉시 재라벨링 ──
         if any(q <= 3 for q in q1_scores):
@@ -182,15 +187,29 @@ def _classify_samples(all_annotations):
             continue
 
         # ── ③④ 3명 이상 & 모두 q1 >= 4 ──
-        labels = [a["final_label"] for a in r1 if a["final_label"] in ("F", "C", "M")]
+        # labels = [a["final_label"] for a in r1 if a["final_label"] in ("F", "C", "M")]
         predicted = predicted_map.get(sid)
-        all_match_llm = bool(predicted and labels and all(l == predicted for l in labels))
+        
+        # predicted None 방어
+        if predicted not in ("F", "C", "M"):
+            results[sid] = {"status": "in_progress", "confirmed_label": None}
+            continue
+
+        labels = []
+        for a in r1:
+            if a["q1"] is not None and a["q1"] >= 4:
+                labels.append(predicted)
+            elif a["final_label"] in ("F", "C", "M"):
+                labels.append(a["final_label"])
+            
+        all_match_llm = len(labels) == len(r1) and all(l == predicted for l in labels)
 
         if all_match_llm:
-            # ③ 확정
-            results[sid] = {"status": "confirmed", "confirmed_label": predicted}
+            results[sid] = {
+                "status": "confirmed",
+                "confirmed_label": predicted
+            }
         else:
-            # ④ q1은 높지만 라벨 불일치 → 재라벨링
             results[sid] = _relabeling_path(r2)
 
     return results
@@ -307,8 +326,20 @@ def submit(data: dict):
     try:
         sample_id = data["sample_id"]
         annotator = data["annotator"]
-        final_label = data["final_label"]
         q1 = data.get("q1")
+        final_label = data.get("final_label")  # get으로 변경 (None 허용)
+
+        # 핵심 validation 추가
+        if q1 is None:
+            return {"status": "error", "message": "q1 is required"}
+
+        # q1 ≤ 3 → label 필수
+        if q1 <= 3 and not final_label:
+            return {"status": "error", "message": "final_label required when q1 <= 3"}
+
+        # q1 ≥ 4 → label 무시 (강제로 None 처리)
+        if q1 >= 4:
+            final_label = None
 
         exists = cursor.execute("""
             SELECT COUNT(*) FROM annotations
