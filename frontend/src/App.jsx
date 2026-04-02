@@ -8,8 +8,8 @@ const CATEGORIES = ["ALL","경제","정치","사회","문화","국제","IT과학
 
 const STATUS_LABELS = {
   confirmed:           { text: "✅ 확정 (4~5점)", color: "#16a34a" },
-  discussion_resolved: { text: "✅ 상의 완료",    color: "#2563eb" },
-  needs_discussion:    { text: "⚠️ 상의 필요",    color: "#d97706" },
+  discussion_resolved: { text: "✅ Disagreement Resolved",    color: "#2563eb" },
+  needs_discussion:    { text: "⚠️ Disagreement",    color: "#d97706" },
   in_progress:         { text: "⬜ 진행 중",       color: "#9ca3af" },
 };
 
@@ -123,7 +123,7 @@ function DiscussionPage({ onBack, allSamples }) {
   return (
     <div className="container">
       <div className="header">
-        <h1>💬 상의 필요 샘플</h1>
+        <h1>💬 Disagreement Set </h1>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 12, color: "#6b7280" }}>
             완료 {discussionData.resolved_count} / 전체 {discussionData.total}
@@ -149,7 +149,7 @@ function DiscussionPage({ onBack, allSamples }) {
               {pendingItems.length > 0 && (
                 <>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#d97706", padding: "6px 0 4px", borderBottom: "1px solid #e5e7eb", marginBottom: 4 }}>
-                    ⚠️ 상의 필요 ({pendingItems.length}개)
+                    ⚠️ Disagreement Sample ({pendingItems.length}개)
                   </div>
                   {pendingItems.map(item => (
                     <div key={item.sample_id}
@@ -318,8 +318,8 @@ function AdminPage({ onBack }) {
   const clfTotal = Object.values(clf).reduce((a, b) => a + b, 0);
   const STATUS_DISPLAY = [
     { key: "confirmed",           label: "확정 (4~5점)",   color: "#16a34a" },
-    { key: "discussion_resolved", label: "상의 완료",      color: "#2563eb" },
-    { key: "needs_discussion",    label: "상의 필요",      color: "#d97706" },
+    { key: "discussion_resolved", label: "Disagreement Resolved",      color: "#2563eb" },
+    { key: "needs_discussion",    label: "Disagreement",      color: "#d97706" },
     { key: "in_progress",         label: "진행 중",        color: "#9ca3af" },
   ];
 
