@@ -130,13 +130,6 @@ def _get_decisions(conn):
 
 
 def _classify_samples(all_annotations, decisions=None):
-    """
-    분류 기준:
-    - confirmed: 모든 q1 >= 4 AND 3명 이상 제출 → LLM 라벨 확정
-    - discussion_resolved: 1~3점 받은 샘플이지만 상의 완료 → 결정된 라벨
-    - needs_discussion: 1명이라도 q1 <= 3 → 상의 필요
-    - in_progress: 3명 미만 제출
-    """
     if decisions is None:
         decisions = {}
 
@@ -151,8 +144,9 @@ def _classify_samples(all_annotations, decisions=None):
     for sid in all_ids:
         anns = by_sample.get(sid, [])
         q1_scores = [a["q1"] for a in anns if a["q1"] is not None]
+        predicted = predicted_map.get(sid)
 
-        # 상의 완료된 샘플
+        # 수동으로 결정된 샘플 (자동 확정보다 우선)
         if sid in decisions:
             results[sid] = {"status": "discussion_resolved", "confirmed_label": decisions[sid]}
             continue
@@ -161,8 +155,27 @@ def _classify_samples(all_annotations, decisions=None):
             results[sid] = {"status": "in_progress", "confirmed_label": None}
             continue
 
-        # 1명이라도 q1 <= 3 → 상의 필요
+        # 1명이라도 q1 <= 3 → disagreement 처리
         if any(q <= 3 for q in q1_scores):
+            labels = []
+            for a in anns:
+                if a["q1"] is None:
+                    continue
+                if a["q1"] >= 4 and predicted in ("F", "C", "M"):
+                    labels.append(predicted)
+                elif a["q1"] <= 3 and a["final_label"] in ("F", "C", "M"):
+                    labels.append(a["final_label"])
+
+            # 3명 이상 동일 라벨 → 자동 확정
+            if labels:
+                top = Counter(labels).most_common(1)
+                if top and top[0][1] >= 3:
+                    results[sid] = {
+                        "status": "discussion_resolved",
+                        "confirmed_label": top[0][0]
+                    }
+                    continue
+
             results[sid] = {"status": "needs_discussion", "confirmed_label": None}
             continue
 
@@ -172,7 +185,10 @@ def _classify_samples(all_annotations, decisions=None):
             continue
 
         # 모두 q1 >= 4, 3명 이상 → LLM 라벨 확정
-        predicted = predicted_map.get(sid)
+        if predicted not in ("F", "C", "M"):
+            results[sid] = {"status": "in_progress", "confirmed_label": None}
+            continue
+
         results[sid] = {"status": "confirmed", "confirmed_label": predicted}
 
     return results
