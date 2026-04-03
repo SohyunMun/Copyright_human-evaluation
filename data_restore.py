@@ -39,11 +39,20 @@ def load_csv(path):
 
 
 def row_to_payload(row):
+    q1 = safe_q1(row["q1"])
+    label = row.get("final_label")
+
+    if q1 is not None and q1 <= 3:
+        if label not in ("F", "C", "M"):
+            return None 
+    else:
+        label = None
+
     return {
         "sample_id": str(row["sample_id"]),
         "annotator": str(row["annotator"]),
-        "final_label": row.get("final_label") if pd.notna(row.get("final_label")) else None,
-        "q1": safe_q1(row["q1"]),
+        "final_label": label,
+        "q1": q1,
     }
 
 
@@ -53,6 +62,8 @@ def restore_via_submit(df):
 
     for i, (_, row) in enumerate(df.iterrows()):
         payload = row_to_payload(row)
+        if payload is None:
+            continue
         try:
             res = requests.post(f"{BASE_URL}/submit", json={**payload, "round": 1}, timeout=10)
             result = res.json()
@@ -73,7 +84,11 @@ def restore_via_submit(df):
 
 
 def restore_via_batch(df):
-    data = [row_to_payload(row) for _, row in df.iterrows()]
+    data = []
+    for _, row in df.iterrows():
+        payload = row_to_payload(row)
+        if payload is not None:
+            data.append(payload)
     print(f"  📤 {len(data)}개 행을 /restore API로 전송 중...")
     try:
         res = requests.post(f"{BASE_URL}/restore", json={"data": data}, timeout=120)
