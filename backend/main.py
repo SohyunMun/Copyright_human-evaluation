@@ -66,6 +66,16 @@ def _migrate_db():
                 decided_at TEXT
             )
         """)
+
+        # excluded_samples 테이블 (제외된 샘플)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS excluded_samples (
+                sample_id TEXT,
+                annotator TEXT,
+                excluded_at TEXT,
+                PRIMARY KEY (sample_id, annotator)
+            )
+        """)
         conn.commit()
     finally:
         conn.close()
@@ -129,7 +139,21 @@ def _get_decisions(conn):
     return {r[0]: r[1] for r in rows}
 
 
+def _get_excluded_samples(conn):
+    cursor = conn.cursor()
+    rows = cursor.execute("""
+        SELECT DISTINCT sample_id FROM excluded_samples
+    """).fetchall()
+    return set(r[0] for r in rows)
+
+
 def _classify_samples(all_annotations, decisions=None):
+    conn = get_db_conn()
+    try:
+        excluded = _get_excluded_samples(conn)
+    finally:
+        conn.close()
+    
     if decisions is None:
         decisions = {}
 
@@ -142,6 +166,10 @@ def _classify_samples(all_annotations, decisions=None):
     all_ids = set(by_sample.keys()) | set(decisions.keys())
 
     for sid in all_ids:
+        if sid in excluded:
+            results[sid] = {"status": "excluded", "confirmed_label": None}
+            continue
+        
         anns = by_sample.get(sid, [])
         q1_scores = [a["q1"] for a in anns if a["q1"] is not None]
         predicted = predicted_map.get(sid)
@@ -156,7 +184,10 @@ def _classify_samples(all_annotations, decisions=None):
             continue
 
         # 1명이라도 q1 <= 3 → disagreement 처리
-        if any(q <= 3 for q in q1_scores):
+        low_count = sum(1 for q in q1_scores if q <= 3)
+
+        # 1️⃣ 2명 이상 disagree → 진짜 conflict
+        if low_count >= 2:
             labels = []
             for a in anns:
                 if a["q1"] is None:
@@ -166,30 +197,60 @@ def _classify_samples(all_annotations, decisions=None):
                 elif a["q1"] <= 3 and a["final_label"] in ("F", "C", "M"):
                     labels.append(a["final_label"])
 
-            # 3명 이상 동일 라벨 → 자동 확정
             if labels:
-                top = Counter(labels).most_common(1)
-                if top and top[0][1] >= 3:
+                counter = Counter(labels)
+                top_label, top_count = counter.most_common(1)[0]
+
+                if top_count > len(labels) / 2:
                     results[sid] = {
                         "status": "discussion_resolved",
-                        "confirmed_label": top[0][0]
+                        "confirmed_label": top_label
                     }
-                    continue
-
-            results[sid] = {"status": "needs_discussion", "confirmed_label": None}
+                else:
+                    results[sid] = {
+                        "status": "needs_discussion",
+                        "confirmed_label": None
+                    }
+            else:
+                results[sid] = {
+                    "status": "needs_discussion",
+                    "confirmed_label": None
+                }
             continue
 
-        # 3명 미만 → 진행 중
+        # 2️⃣ 1명만 disagree → 그냥 LLM 확정
+        elif low_count == 1:
+            if predicted in ("F", "C", "M"):
+                results[sid] = {
+                    "status": "confirmed",
+                    "confirmed_label": predicted
+                }
+            else:
+                results[sid] = {
+                    "status": "in_progress",
+                    "confirmed_label": None
+                }
+            continue
+
+        # 3️⃣ 아직 3명 미만
         if len(anns) < 3:
-            results[sid] = {"status": "in_progress", "confirmed_label": None}
+            results[sid] = {
+                "status": "in_progress",
+                "confirmed_label": None
+            }
             continue
 
-        # 모두 q1 >= 4, 3명 이상 → LLM 라벨 확정
-        if predicted not in ("F", "C", "M"):
-            results[sid] = {"status": "in_progress", "confirmed_label": None}
-            continue
-
-        results[sid] = {"status": "confirmed", "confirmed_label": predicted}
+        # 4️⃣ 전부 agree (q1 >= 4)
+        if predicted in ("F", "C", "M"):
+            results[sid] = {
+                "status": "confirmed",
+                "confirmed_label": predicted
+            }
+        else:
+            results[sid] = {
+                "status": "in_progress",
+                "confirmed_label": None
+            }
 
     return results
 
@@ -338,8 +399,9 @@ def submit(data: dict):
 
         if q1 is None:
             return {"status": "error", "message": "q1 is required"}
-        if q1 <= 3 and not final_label:
-            return {"status": "error", "message": "final_label required when q1 <= 3"}
+        if q1 <= 3:
+            if final_label not in ("F", "C", "M"):
+                return {"status": "error", "message": "final_label must be F/C/M when q1 <= 3"}
         if q1 >= 4:
             final_label = None  # q1 >= 4면 LLM 라벨 사용
 
@@ -390,6 +452,30 @@ def submit(data: dict):
         print(f"파일 저장 오류: {e}")
 
     return {"status": "saved"}
+
+
+@app.post("/exclude")
+def exclude_sample(data: dict):
+    sample_id = data.get("sample_id")
+    annotator = data.get("annotator")
+
+    if not sample_id or not annotator:
+        return {"status": "error", "message": "sample_id, annotator required"}
+
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT OR REPLACE INTO excluded_samples (sample_id, annotator, excluded_at)
+            VALUES (?, ?, ?)
+        """, (sample_id, annotator, datetime.utcnow().isoformat()))
+        conn.commit()
+        return {"status": "excluded"}
+    except Exception as e:
+        conn.rollback()
+        return {"status": "error", "message": str(e)}
+    finally:
+        conn.close()
 
 
 @app.get("/annotation")
@@ -800,6 +886,8 @@ def export_final_dataset():
     """
     conn = get_db_conn()
     try:
+        excluded = _get_excluded_samples(conn)
+        
         all_annotations = _get_all_annotations_raw(conn)
         decisions = _get_decisions(conn)
         classification = _classify_samples(all_annotations, decisions)
@@ -808,6 +896,8 @@ def export_final_dataset():
         result = []
 
         for sid, clf in classification.items():
+            if sid in excluded:
+                continue
             if clf["status"] not in ("confirmed", "discussion_resolved"):
                 continue
             s = sample_map.get(sid)
