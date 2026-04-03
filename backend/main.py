@@ -1,871 +1,844 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import axios from "axios";
-import "./App.css";
+from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from iaa import compute_fleiss_kappa, compute_krippendorff_alpha_q1, compute_icc, compute_krippendorff_alpha_label
+from database import init_db, get_db
+import os, json, csv, io
+from collections import defaultdict, Counter
+from datetime import datetime
 
-const BASE_URL = "https://copyrighthuman-evaluation-production-df30.up.railway.app";
-const ANNOTATORS = ["A", "B", "C", "D", "E"];
-const CATEGORIES = ["ALL","경제","정치","사회","문화","국제","IT과학","스포츠","교육","라이프스타일","지역"];
+app = FastAPI()
 
-const STATUS_LABELS = {
-  confirmed:           { text: "✅ 확정",                   color: "#16a34a" },
-  discussion_resolved: { text: "✅ Disagreement Resolved",  color: "#2563eb" },
-  needs_discussion:    { text: "⚠️ Disagreement",           color: "#d97706" },
-  in_progress:         { text: "⬜ 진행 중",                color: "#9ca3af" },
-  excluded:            { text: "🚫 제외",                   color: "#6b7280" },
-};
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-function GuidelinePanel() {
-  return (
-    <div className="guideline-panel">
-      <div className="guideline-header">📖 Human Evaluation Guideline</div>
-      <div className="guideline-body">
-        <div style={{ marginBottom: 12 }}>
-          <div className="guideline-section-title">4. Annotation Guideline (Copyright-aware)</div>
-          <div className="guideline-label-box safe">
-            <div className="guideline-label-title safe">F (Safe)</div>
-            <div>표현이 아닌 정보가 핵심이며, 다양한 방식으로 재작성 가능한 문장</div>
-            <div className="guideline-label-sub">→ 그대로 사용 가능</div>
-          </div>
-          <div className="guideline-label-box risky">
-            <div className="guideline-label-title risky">C (Risky)</div>
-            <div>표현 자체가 의미 전달에 중요한 역할을 하며, 그대로 생성 시 위험한 문장</div>
-            <div className="guideline-label-sub">→ 반드시 재작성 필요</div>
-          </div>
-          <div className="guideline-label-box mixed">
-            <div className="guideline-label-title mixed">M (Mixed)</div>
-            <div>사실 정보와 표현 요소가 함께 존재하는 문장</div>
-            <div className="guideline-label-sub">→ 부분 재작성 필요</div>
-          </div>
-        </div>
-        <div>
-          <div className="guideline-section-title">5. Decision Rule</div>
-          <div className="decision-rule-box">
-            <div className="decision-rule-question">
-              "이 문장은 <strong>표현을 바꾸지 않고 그대로 생성해야</strong> 의미가 유지되는가?"
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 12 }}>
-              <div><span style={{ color: "#16a34a", fontWeight: 700 }}>NO →</span> F (표현을 바꿔도 의미 유지 가능)</div>
-              <div><span style={{ color: "#dc2626", fontWeight: 700 }}>YES →</span> C (표현 자체가 핵심)</div>
-              <div><span style={{ color: "#d97706", fontWeight: 700 }}>BOTH →</span> M (사실 + 표현 혼재)</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SAVE_DIR = os.path.join(BASE_DIR, "annotator_eval")
+samples = []
 
 
-/* ═══════════════════════════════════════════════════════════════
-   Disagreement Set 페이지 — 열람 전용
-   ═══════════════════════════════════════════════════════════════ */
-function DiscussionPage({ onBack, allSamples }) {
-  const [discussionData, setDiscussionData] = useState({ samples: [], total: 0, resolved_count: 0 });
-  const [selected, setSelected] = useState(null);
-  const [sampleDetail, setSampleDetail] = useState(null);
-  const [loading, setLoading] = useState(true);
+def get_db_conn():
+    conn = get_db()
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    return conn
 
-  const fetchDiscussion = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get(`${BASE_URL}/discussion_samples`);
-      setDiscussionData(res.data);
-    } catch {}
-    setLoading(false);
-  }, []);
 
-  useEffect(() => { fetchDiscussion(); }, []);
+def get_all_samples():
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        rows = cursor.execute("""
+            SELECT sample_id, article_id, category, previous, target, next, predicted
+            FROM samples ORDER BY rowid
+        """).fetchall()
+        return [
+            {"sample_id": r[0], "article_id": r[1], "category": r[2],
+             "previous": r[3], "target": r[4], "next": r[5], "predicted": r[6]}
+            for r in rows
+        ]
+    except Exception as e:
+        print(f"샘플 로드 오류: {e}")
+        return []
+    finally:
+        conn.close()
 
-  const selectSample = async (item) => {
-    setSelected(item);
-    const found = allSamples.find(s => s.sample_id === item.sample_id);
-    if (found) {
-      const catList = allSamples.filter(s => s.category === found.category);
-      const idx = catList.findIndex(s => s.sample_id === item.sample_id);
-      try {
-        const res = await axios.get(`${BASE_URL}/sample?index=${idx >= 0 ? idx : 0}&category=${found.category}`);
-        setSampleDetail(res.data);
-      } catch { setSampleDetail(null); }
+
+def _migrate_db():
+    conn = get_db_conn()
+    try:
+        try:
+            conn.execute("ALTER TABLE annotations ADD COLUMN round INTEGER DEFAULT 1")
+            conn.commit()
+        except Exception:
+            pass
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS excluded_samples (
+                sample_id TEXT,
+                annotator TEXT,
+                excluded_at TEXT,
+                PRIMARY KEY (sample_id, annotator)
+            )
+        """)
+        conn.commit()
+    finally:
+        conn.close()
+
+
+@app.on_event("startup")
+def startup():
+    global samples
+    try:
+        init_db()
+        _migrate_db()
+        samples = get_all_samples()
+        print(f"샘플 개수: {len(samples)}")
+    except Exception as e:
+        print(f"startup 오류: {e}")
+
+
+def get_filtered(category):
+    if category and category != "ALL":
+        return [s for s in samples if s["category"] == category]
+    return samples
+
+
+def load_annotation_from_db(sample_id: str, annotator: str, round_num: int = 1):
+    if not annotator:
+        return {"q1": None, "final_label": None}
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        row = cursor.execute("""
+            SELECT q1, final_label FROM annotations
+            WHERE sample_id=? AND annotator=? AND (round=? OR (round IS NULL AND ?=1))
+        """, (sample_id, annotator, round_num, round_num)).fetchone()
+        if row:
+            return {"q1": row[0], "final_label": row[1]}
+        return {"q1": None, "final_label": None}
+    except Exception as e:
+        print(f"annotation 조회 오류: {e}")
+        return {"q1": None, "final_label": None}
+    finally:
+        conn.close()
+
+
+def _get_all_annotations_raw(conn):
+    cursor = conn.cursor()
+    rows = cursor.execute("""
+        SELECT sample_id, annotator, final_label, q1, round
+        FROM annotations WHERE (round IS NULL OR round = 1)
+    """).fetchall()
+    return [
+        {"sample_id": r[0], "annotator": r[1], "final_label": r[2],
+         "q1": r[3], "round": r[4] if r[4] is not None else 1}
+        for r in rows
+    ]
+
+
+def _classify_samples(all_annotations):
+    """
+    다수결 원칙으로 최종 라벨 자동 결정
+    - q1 >= 4 → LLM 라벨로 집계
+    - q1 <= 3 → 직접 선택한 라벨로 집계
+    - q1 = NULL → 제외 처리
+    - 과반수(>50%) 라벨 → confirmed / discussion_resolved
+    - 과반수 없음 → needs_discussion
+    - 3명 미만 → in_progress
+    """
+    predicted_map = {s["sample_id"]: s.get("predicted") for s in samples}
+    by_sample = defaultdict(list)
+    for ann in all_annotations:
+        by_sample[ann["sample_id"]].append(ann)
+
+    results = {}
+
+    for sid, anns in by_sample.items():
+        # 1명이라도 q1=NULL(제외) → excluded
+        has_excluded = any(a["q1"] is None for a in anns)
+        if has_excluded:
+            results[sid] = {"status": "excluded", "confirmed_label": None}
+            continue
+
+        q1_scores = [a["q1"] for a in anns if a["q1"] is not None]
+        predicted = predicted_map.get(sid)
+
+        if not q1_scores:
+            results[sid] = {"status": "in_progress", "confirmed_label": None}
+            continue
+
+        # 3명 미만 → 진행 중
+        if len(anns) < 3:
+            results[sid] = {"status": "in_progress", "confirmed_label": None}
+            continue
+
+        # 다수결 집계
+        labels = []
+        for a in anns:
+            if a["q1"] is None:
+                continue
+            if a["q1"] >= 4 and predicted in ("F", "C", "M"):
+                labels.append(predicted)
+            elif a["q1"] <= 3 and a["final_label"] in ("F", "C", "M"):
+                labels.append(a["final_label"])
+
+        if not labels:
+            results[sid] = {"status": "in_progress", "confirmed_label": None}
+            continue
+
+        counter = Counter(labels)
+        top_label, top_count = counter.most_common(1)[0]
+        has_disagreement = any(q <= 3 for q in q1_scores)
+
+        if top_count > len(labels) / 2:
+            # 과반수 달성
+            status = "confirmed" if not has_disagreement else "discussion_resolved"
+            results[sid] = {"status": status, "confirmed_label": top_label}
+        else:
+            # 과반수 없음 → 수동 확인 필요
+            results[sid] = {"status": "needs_discussion", "confirmed_label": None}
+
+    return results
+
+
+def _build_iaa_data(conn):
+    cursor = conn.cursor()
+    rows = cursor.execute("""
+        SELECT sample_id, annotator, final_label, q1 FROM annotations
+        WHERE (round IS NULL OR round = 1)
+    """).fetchall()
+
+    score_dict = defaultdict(list)
+    label_dict = defaultdict(list)
+
+    for sample_id, annotator, label, q1 in rows:
+        if q1 is None:
+            continue
+        score_dict[sample_id].append((annotator, label, q1))
+        if q1 <= 3 and label in ("F", "C", "M"):
+            label_dict[sample_id].append((annotator, label, q1))
+
+    score_filtered = {
+        sid: items for sid, items in score_dict.items()
+        if len(set(a for a, _, _ in items)) >= 3
     }
-  };
-
-  const pendingItems = discussionData.samples.filter(s => !s.resolved);
-  const resolvedItems = discussionData.samples.filter(s => s.resolved);
-
-  return (
-    <div className="container">
-      <div className="header">
-        <h1>📋 Disagreement Set</h1>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 12, color: "#6b7280" }}>
-            Resolved {discussionData.resolved_count} / 전체 {discussionData.total}
-          </span>
-          <button onClick={fetchDiscussion} className="nav-btn" style={{ padding: "4px 10px", fontSize: 11 }}>↻ 새로고침</button>
-          <button onClick={onBack} className="nav-btn">← 메인으로</button>
-        </div>
-      </div>
-
-      <div style={{ background: "#fef9c3", border: "1px solid #fde047", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#854d0e" }}>
-        ⚠️ 아래 샘플들은 <strong>1명 이상이 1~3점을 선택</strong>한 경우입니다.
-        어노테이터들이 선택한 라벨의 <strong>다수결</strong>로 최종 라벨이 자동 결정됩니다.
-      </div>
-
-      <div className="main">
-        {/* LEFT: 목록 */}
-        <div className="card relabel-list">
-          {loading ? (
-            <p style={{ color: "#9ca3af" }}>로딩 중...</p>
-          ) : discussionData.total === 0 ? (
-            <p style={{ color: "#16a34a" }}>🎉 Disagreement 샘플이 없습니다!</p>
-          ) : (
-            <div style={{ overflowY: "auto" }}>
-              {pendingItems.length > 0 && (
-                <>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#d97706", padding: "6px 0 4px", borderBottom: "1px solid #e5e7eb", marginBottom: 4 }}>
-                    ⚠️ Disagreement ({pendingItems.length}개)
-                  </div>
-                  {pendingItems.map(item => (
-                    <div key={item.sample_id}
-                      onClick={() => selectSample(item)}
-                      className={`relabel-item ${selected?.sample_id === item.sample_id ? "active" : ""}`}
-                    >
-                      <div style={{ fontWeight: 600, fontSize: 12, color: "#111827" }}>{item.sample_id}</div>
-                      <div style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>
-                        LLM: <strong>{item.predicted}</strong> &nbsp;|&nbsp;
-                        {item.annotations.map(a => `${a.annotator}:${a.q1}점${a.label ? `(${a.label})` : ""}`).join(" ")}
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-              {resolvedItems.length > 0 && (
-                <>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#2563eb", padding: "10px 0 4px", borderBottom: "1px solid #e5e7eb", marginBottom: 4 }}>
-                    ✅ Disagreement Resolved ({resolvedItems.length}개)
-                  </div>
-                  {resolvedItems.map(item => (
-                    <div key={item.sample_id}
-                      onClick={() => selectSample(item)}
-                      className={`relabel-item done ${selected?.sample_id === item.sample_id ? "active" : ""}`}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ fontWeight: 600, fontSize: 12, color: "#111827" }}>{item.sample_id}</div>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "#2563eb" }}>→ {item.decided_label}</span>
-                      </div>
-                      <div style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>
-                        {item.annotations.map(a => `${a.annotator}:${a.q1}점${a.label ? `(${a.label})` : ""}`).join(" ")}
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* RIGHT: 상세 — 열람 전용 */}
-        <div className="card" style={{ flex: 1 }}>
-          {!selected ? (
-            <div style={{ textAlign: "center", padding: "60px 20px", color: "#9ca3af" }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
-              <p>좌측에서 샘플을 선택하세요.</p>
-            </div>
-          ) : (
-            <>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: "#9ca3af" }}>Sample ID</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{selected.sample_id}</div>
-                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
-                  LLM 예측 라벨: <strong style={{ color: "#dc2626" }}>{selected.predicted}</strong>
-                </div>
-              </div>
-
-              {/* 어노테이터별 응답 */}
-              <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: 12, marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, color: "#374151", marginBottom: 8, fontSize: 13 }}>
-                  어노테이터별 응답
-                </div>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                  <thead>
-                    <tr style={{ background: "#f1f5f9" }}>
-                      <th style={{ padding: "5px 8px", textAlign: "left" }}>Annotator</th>
-                      <th style={{ padding: "5px 8px", textAlign: "center" }}>Q1 점수</th>
-                      <th style={{ padding: "5px 8px", textAlign: "center" }}>선택 라벨</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selected.annotations.map((a, i) => (
-                      <tr key={i} style={{ borderBottom: "1px solid #f1f5f9", background: a.q1 !== null && a.q1 <= 3 ? "#fef2f2" : "white" }}>
-                        <td style={{ padding: "5px 8px", fontWeight: 600 }}>Annotator {a.annotator}</td>
-                        <td style={{ padding: "5px 8px", textAlign: "center",
-                          color: a.q1 === null ? "#9ca3af" : a.q1 <= 3 ? "#dc2626" : "#16a34a", fontWeight: 700 }}>
-                          {a.q1 === null ? "제외" : `${a.q1}점 ${a.q1 <= 3 ? "⚠️" : "✅"}`}
-                        </td>
-                        <td style={{ padding: "5px 8px", textAlign: "center", fontWeight: 700,
-                          color: a.label === "C" ? "#dc2626" : a.label === "M" ? "#d97706" : "#2563eb" }}>
-                          {a.label || "-"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* 다수결 결과 */}
-                {selected.resolved && (
-                  <div style={{ marginTop: 10, padding: "8px 12px", background: "#eff6ff", borderRadius: 6, fontSize: 12, color: "#1e40af", fontWeight: 600 }}>
-                    ✅ 다수결 자동 확정 라벨: <span style={{ fontSize: 14 }}>{selected.decided_label}</span>
-                  </div>
-                )}
-                {!selected.resolved && (
-                  <div style={{ marginTop: 10, padding: "8px 12px", background: "#fef9c3", borderRadius: 6, fontSize: 12, color: "#854d0e" }}>
-                    ⚠️ 아직 과반수 합의 미달 — 더 많은 어노테이터의 응답이 필요합니다
-                  </div>
-                )}
-              </div>
-
-              {/* 샘플 텍스트 */}
-              {sampleDetail && (
-                <div style={{ marginBottom: 16 }}>
-                  <p className="label">Previous Sentence</p>
-                  <p style={{ fontSize: 13, color: "#6b7280" }}>{sampleDetail.previous || "—"}</p>
-                  <p className="label">Target Sentence</p>
-                  <p className="target">{sampleDetail.target}</p>
-                  <p className="label">Next Sentence</p>
-                  <p style={{ fontSize: 13, color: "#6b7280" }}>{sampleDetail.next || "—"}</p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-/* ═══════════════════════════════════════════════════════════════
-   Admin (Dashboard) Page
-   ═══════════════════════════════════════════════════════════════ */
-function AdminPage({ onBack }) {
-  const [adminData, setAdminData] = useState(null);
-  const [dbQuery, setDbQuery] = useState({ open: false, sampleId: "", annotator: "", data: [], total: 0, loading: false });
-
-  const runDbQuery = async () => {
-    setDbQuery(prev => ({ ...prev, loading: true }));
-    try {
-      const params = new URLSearchParams();
-      if (dbQuery.sampleId) params.append("sample_id", dbQuery.sampleId);
-      if (dbQuery.annotator) params.append("annotator", dbQuery.annotator);
-      params.append("limit", "100");
-      const res = await axios.get(`${BASE_URL}/db_query?${params.toString()}`);
-      setDbQuery(prev => ({ ...prev, data: res.data.data, total: res.data.total, loading: false }));
-    } catch {
-      setDbQuery(prev => ({ ...prev, loading: false }));
+    label_filtered = {
+        sid: items for sid, items in label_dict.items()
+        if len(set(a for a, _, _ in items)) >= 3
     }
-  };
 
-  useEffect(() => {
-    axios.get(`${BASE_URL}/admin`).then(res => setAdminData(res.data));
-  }, []);
-
-  if (!adminData) return <div className="container"><p style={{ color: "#6b7280" }}>로딩 중...</p></div>;
-
-  const clf = adminData.classification || {};
-  const clfTotal = Object.values(clf).reduce((a, b) => a + b, 0);
-  const STATUS_DISPLAY = [
-    { key: "confirmed",           label: "확정 (다수결)",           color: "#16a34a" },
-    { key: "discussion_resolved", label: "Disagreement Resolved",   color: "#2563eb" },
-    { key: "needs_discussion",    label: "Disagreement (합의 미달)", color: "#d97706" },
-    { key: "in_progress",         label: "진행 중",                 color: "#9ca3af" },
-    { key: "excluded",            label: "제외",                    color: "#6b7280" },
-  ];
-
-  return (
-    <div className="container">
-      <div className="header">
-        <h1>📊 진행도 대시보드</h1>
-        <button onClick={onBack} className="nav-btn">← 돌아가기</button>
-      </div>
-      <div style={{ maxWidth: 960, margin: "0 auto" }}>
-        <div className="card">
-
-          {/* 전체 진행률 */}
-          <h2 className="dash-section-title">전체 진행률 (총 {adminData.total_samples}개)</h2>
-          {ANNOTATORS.map(a => {
-            const p = adminData.progress[a] || { done: 0, total: 1, percent: 0 };
-            return (
-              <div key={a} style={{ marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ width: 90, fontSize: 13, fontWeight: 600, color: "#374151" }}>Annotator {a}</span>
-                <div className="mini-bar" style={{ flex: 1, maxWidth: 280 }}>
-                  <div className="mini-fill" style={{ width: `${p.percent}%` }} />
-                </div>
-                <span style={{ fontSize: 12, color: "#6b7280", minWidth: 130 }}>
-                  {p.done} / {p.total} ({p.percent}%)
-                </span>
-              </div>
-            );
-          })}
-
-          {/* IAA */}
-          <h2 className="dash-section-title" style={{ marginTop: 28 }}>IAA (어노테이터 간 일치도)</h2>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
-            {[
-              ["Fleiss κ (Label)", adminData.iaa.fleiss_kappa, `라벨 일치도 (Disagreement ${adminData.iaa.label_sample_count || 0}개 기준)`],
-              ["Krippendorff α (Label)", adminData.iaa.alpha_label, `라벨 일치도 (Disagreement ${adminData.iaa.label_sample_count || 0}개 기준)`],
-              ["Krippendorff α (Score)", adminData.iaa.alpha_q1, `Q1 점수 일치도 (전체 ${adminData.iaa.score_sample_count || 0}개 기준)`],
-              ["ICC(2,1) (Score)", adminData.iaa.icc, `Q1 점수 절대 일치도 (전체 ${adminData.iaa.score_sample_count || 0}개 기준)`],
-            ].map(([lbl, val, desc]) => (
-              <div key={lbl} className="dashboard-card">
-                <div className="dashboard-metric-label">{lbl}</div>
-                <div className="dashboard-metric-value">{typeof val === "number" ? val.toFixed(3) : "-"}</div>
-                <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{desc}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* 샘플 분류 현황 */}
-          <h2 className="dash-section-title" style={{ marginTop: 28 }}>샘플 분류 현황</h2>
-          {clfTotal > 0 ? (
-            <>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
-                {STATUS_DISPLAY.map(({ key, label, color }) => (
-                  <div key={key} className="dashboard-card" style={{ minWidth: 130 }}>
-                    <div style={{ fontSize: 11, color, fontWeight: 600, marginBottom: 2 }}>● {label}</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: "#111827" }}>{clf[key] || 0}</div>
-                    <div style={{ fontSize: 11, color: "#9ca3af" }}>
-                      {clfTotal ? Math.round(((clf[key] || 0) / clfTotal) * 100) : 0}%
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="stacked-bar" style={{ marginBottom: 4 }}>
-                {STATUS_DISPLAY.map(({ key, color }) => {
-                  const pct = clfTotal ? ((clf[key] || 0) / clfTotal) * 100 : 0;
-                  return pct > 0 ? (
-                    <div key={key} style={{ width: `${pct}%`, background: color }} title={`${key}: ${clf[key] || 0}`} />
-                  ) : null;
-                })}
-              </div>
-              <div className="classification-guide">
-                <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 12 }}>분류 기준 안내</div>
-                <div>• <strong>확정</strong>: 3명 이상 제출 + 모두 Q1 4~5점 → 다수결로 라벨 확정</div>
-                <div>• <strong>Disagreement Resolved</strong>: 1명이라도 Q1 1~3점이지만 다수결(과반수) 라벨 확정</div>
-                <div>• <strong>Disagreement (합의 미달)</strong>: 과반수 라벨 없음 → 더 많은 응답 필요</div>
-                <div>• <strong>진행 중</strong>: 아직 3명 미만 제출</div>
-                <div>• <strong>제외</strong>: 1명이라도 제외 버튼 클릭</div>
-              </div>
-            </>
-          ) : (
-            <p style={{ color: "#9ca3af", fontSize: 13 }}>아직 분류 가능한 샘플이 없습니다 (최소 3명 이상 어노테이션 필요)</p>
-          )}
-
-          {/* 카테고리별 진행률 */}
-          <h2 className="dash-section-title" style={{ marginTop: 28 }}>카테고리별 진행률</h2>
-          {Object.entries(adminData.category_progress).map(([cat, data]) => (
-            <div key={cat} style={{ marginBottom: 14 }}>
-              <strong style={{ fontSize: 13 }}>{cat}</strong>
-              <span style={{ fontSize: 12, color: "#9ca3af", marginLeft: 6 }}>(총 {data.total}개)</span>
-              <div style={{ display: "flex", gap: 14, marginTop: 4, flexWrap: "wrap" }}>
-                {ANNOTATORS.map(a => (
-                  <span key={a} style={{ fontSize: 12, color: "#6b7280" }}>
-                    {a}: {data.by_annotator[a] || 0}/{data.total}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          {/* DB 조회 */}
-          <h2 className="dash-section-title" style={{ marginTop: 28 }}>DB 조회</h2>
-          <div style={{ marginBottom: 16 }}>
-            <button onClick={() => setDbQuery(prev => ({ ...prev, open: !prev.open }))}
-              className="nav-btn" style={{ background: "#374151", marginBottom: 8 }}>
-              🔍 DB 직접 조회 {dbQuery.open ? "▲" : "▼"}
-            </button>
-            {dbQuery.open && (
-              <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: 12 }}>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-                  <input placeholder="Sample ID (부분 검색)" value={dbQuery.sampleId}
-                    onChange={e => setDbQuery(prev => ({ ...prev, sampleId: e.target.value }))}
-                    style={{ flex: 1, padding: 6, borderRadius: 6, border: "1px solid #d1d5db", fontSize: 12, minWidth: 140 }} />
-                  <select value={dbQuery.annotator}
-                    onChange={e => setDbQuery(prev => ({ ...prev, annotator: e.target.value }))}
-                    style={{ padding: 6, borderRadius: 6, border: "1px solid #d1d5db", fontSize: 12 }}>
-                    <option value="">전체 Annotator</option>
-                    {ANNOTATORS.map(a => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                  <button onClick={runDbQuery} className="nav-btn" style={{ background: "#4f83f3", fontSize: 12 }}>
-                    {dbQuery.loading ? "검색 중..." : "검색"}
-                  </button>
-                </div>
-                {dbQuery.data.length > 0 && (
-                  <>
-                    <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>총 {dbQuery.total}건</div>
-                    <div style={{ maxHeight: 300, overflowY: "auto" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                        <thead>
-                          <tr style={{ background: "#f1f5f9" }}>
-                            {["Sample ID","Ann","Label","Q1"].map(h => (
-                              <th key={h} style={{ padding: "4px 6px", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {dbQuery.data.map((row, i) => (
-                            <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                              <td style={{ padding: "3px 6px" }}>{row.sample_id}</td>
-                              <td style={{ padding: "3px 6px" }}>{row.annotator}</td>
-                              <td style={{ padding: "3px 6px", fontWeight: 600,
-                                color: row.final_label === "C" ? "#dc2626" : row.final_label === "M" ? "#d97706" : "#2563eb" }}>
-                                {row.final_label || "-"}
-                              </td>
-                              <td style={{ padding: "3px 6px" }}>{row.q1 ?? "제외"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* 데이터 내보내기 */}
-          <h2 className="dash-section-title" style={{ marginTop: 28 }}>데이터 내보내기</h2>
-          <div className="classification-guide" style={{ marginBottom: 12 }}>
-            <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 12, color: "#111827" }}>
-              📊 최종 데이터셋 (확정 + Disagreement Resolved 샘플)
-            </div>
-            <div>다수결로 확정된 라벨을 포함합니다. 제외 샘플은 포함되지 않습니다.</div>
-            <div style={{ marginTop: 4, fontSize: 11, color: "#6b7280" }}>
-              형식: sample_id, target_sentence, label, prev_sentence, next_sentence
-            </div>
-            <div style={{ marginTop: 8 }}>
-              <a href={`${BASE_URL}/export/final_dataset`} download className="nav-btn"
-                style={{ textDecoration: "none", background: "#059669", fontSize: 12, padding: "6px 12px" }}>
-                📥 최종 데이터셋 JSON
-              </a>
-            </div>
-          </div>
-          <div className="classification-guide">
-            <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 12, color: "#111827" }}>
-              🗂️ Raw 어노테이션 (개별 응답 전체)
-            </div>
-            <div>모든 어노테이터의 개별 응답 (제외 샘플은 q1=null로 표시)</div>
-            <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-              <a href={`${BASE_URL}/export/csv`} download className="nav-btn"
-                style={{ textDecoration: "none", background: "#374151", fontSize: 12, padding: "6px 12px" }}>
-                📥 Raw CSV
-              </a>
-              <a href={`${BASE_URL}/export/json`} download className="nav-btn"
-                style={{ textDecoration: "none", background: "#374151", fontSize: 12, padding: "6px 12px" }}>
-                📥 Raw JSON
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+    return score_filtered, label_filtered
 
 
-/* ═══════════════════════════════════════════════════════════════
-   Main App
-   ═══════════════════════════════════════════════════════════════ */
-function App() {
-  const [annotator, setAnnotator] = useState(() => localStorage.getItem("annotator") || null);
-  const [scores, setScores] = useState({ q1: null });
-  const [label, setLabel] = useState("");
-  const [sample, setSample] = useState(null);
-  const [progress, setProgress] = useState({ done: 0, total: 0 });
-  const [currentStep, setCurrentStep] = useState(1);
-  const [total, setTotal] = useState(1);
-  const [category, setCategory] = useState("ALL");
-  const [submittedIndices, setSubmittedIndices] = useState(new Set());
-  const [submittedSampleIds, setSubmittedSampleIds] = useState(new Set());
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [allSamples, setAllSamples] = useState([]);
-  const [jumpOpen, setJumpOpen] = useState(false);
-  const [jumpCategory, setJumpCategory] = useState("ALL");
-  const skipCategoryReset = useRef(false);
-  const [page, setPage] = useState("main");
-  const [sampleClassification, setSampleClassification] = useState({});
-  const [discussionCount, setDiscussionCount] = useState(0);
+def _compute_all_iaa(conn):
+    score_filtered, label_filtered = _build_iaa_data(conn)
 
-  const currentStatus = sample ? sampleClassification[sample.sample_id] || null : null;
-  const resetState = () => { setScores({ q1: null }); setLabel(""); };
-
-  const loadAnnotation = useCallback(async (sampleData, ann) => {
-    const a = ann ?? annotator;
-    if (!a || !sampleData) { resetState(); return; }
-    try {
-      const res = await axios.get(`${BASE_URL}/annotation`, {
-        params: { sample_id: sampleData.sample_id, annotator: a, round_num: 1 },
-      });
-      setScores({ q1: res.data.q1 });
-      setLabel(res.data.final_label || "");
-    } catch { resetState(); }
-  }, [annotator]);
-
-  const fetchSubmittedIndices = useCallback(async (ann, cat) => {
-    if (!ann) return;
-    try {
-      const [idxRes, allRes] = await Promise.all([
-        axios.get(`${BASE_URL}/submitted_ids?annotator=${ann}&category=${cat}`),
-        axios.get(`${BASE_URL}/annotations?annotator=${ann}`),
-      ]);
-      setSubmittedIndices(new Set(idxRes.data.submitted_indices));
-      const ids = (allRes.data || []).filter(a => a.round === 1 || a.round == null).map(a => a.sample_id);
-      setSubmittedSampleIds(new Set(ids));
-    } catch {}
-  }, []);
-
-  const fetchSampleByIndex = async (index, cat) => {
-    const res = await axios.get(`${BASE_URL}/sample`, { params: { index, category: cat } });
-    const data = res.data;
-    setSample(data);
-    setCurrentIndex(data.current_index - 1);
-    setCurrentStep(data.current_index);
-    setTotal(data.total);
-    return data;
-  };
-
-  const fetchProgress = useCallback(async (ann, cat) => {
-    const res = await axios.get(
-      `${BASE_URL}/progress?annotator=${ann ?? annotator ?? ""}&category=${cat ?? category ?? "ALL"}`
-    );
-    setProgress(res.data);
-  }, [annotator, category]);
-
-  const fetchAllSamples = useCallback(async () => {
-    const res = await axios.get(`${BASE_URL}/samples`);
-    setAllSamples(res.data);
-  }, []);
-
-  const fetchClassification = useCallback(async () => {
-    try {
-      const res = await axios.get(`${BASE_URL}/sample_classification`);
-      setSampleClassification(res.data);
-    } catch {}
-  }, []);
-
-  const fetchDiscussionCount = useCallback(async () => {
-    try {
-      const res = await axios.get(`${BASE_URL}/discussion_samples`);
-      const unresolved = (res.data.samples || []).filter(s => !s.resolved).length;
-      setDiscussionCount(unresolved);
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("annotator");
-    fetchAllSamples(); fetchClassification(); fetchDiscussionCount();
-    if (saved) {
-      fetchProgress(saved, "ALL"); fetchSubmittedIndices(saved, "ALL");
-      axios.get(`${BASE_URL}/last_index?annotator=${saved}&category=ALL`).then(res => {
-        fetchSampleByIndex(res.data.last_index, "ALL").then(data => loadAnnotation(data, saved));
-      });
-    } else {
-      fetchSampleByIndex(0, "ALL");
+    result = {
+        "fleiss_kappa": 0,
+        "alpha_label": 0,
+        "alpha_q1": 0,
+        "icc": 0,
+        "label_sample_count": len(label_filtered),
+        "score_sample_count": len(score_filtered),
     }
-  }, []);
 
-  useEffect(() => {
-    if (skipCategoryReset.current) { skipCategoryReset.current = false; return; }
-    fetchSampleByIndex(0, category);
-    fetchProgress(annotator, category);
-    if (annotator) fetchSubmittedIndices(annotator, category);
-  }, [category]);
+    if score_filtered:
+        try:
+            result["alpha_q1"] = compute_krippendorff_alpha_q1(score_filtered)
+            result["icc"] = compute_icc(score_filtered, min_raters=3)
+        except Exception as e:
+            print(f"score IAA 오류: {e}")
 
-  const handleAnnotatorSelect = async (a) => {
-    setAnnotator(a); localStorage.setItem("annotator", a);
-    fetchProgress(a, category); fetchSubmittedIndices(a, category);
-    const res = await axios.get(`${BASE_URL}/last_index?annotator=${a}&category=${category}`);
-    const data = await fetchSampleByIndex(res.data.last_index, category);
-    await loadAnnotation(data, a);
-  };
+    if label_filtered:
+        try:
+            fleiss_input = [
+                {"sample_id": sid, "label": label}
+                for sid, items in label_filtered.items()
+                for _, label, _ in items
+            ]
+            result["fleiss_kappa"] = compute_fleiss_kappa(fleiss_input)
+            result["alpha_label"] = compute_krippendorff_alpha_label(label_filtered)
+        except Exception as e:
+            print(f"label IAA 오류: {e}")
 
-  const nextSample = async () => {
-    if (currentStep >= total) return;
-    const data = await fetchSampleByIndex(currentIndex + 1, category);
-    await loadAnnotation(data, annotator);
-  };
-  const prevSample = async () => {
-    if (currentStep <= 1) return;
-    const data = await fetchSampleByIndex(currentIndex - 1, category);
-    await loadAnnotation(data, annotator);
-  };
+    return result
 
-  const setScore = (key, value) => setScores({ ...scores, [key]: value });
 
-  const submit = async () => {
-    if (!annotator) { alert("Annotator를 선택하세요"); return; }
-    if (scores.q1 === null) { alert("Q1 점수를 선택해주세요"); return; }
-    if (scores.q1 <= 3 && label === "") { alert("Q1이 1~3점인 경우 Final Label을 선택해야 합니다"); return; }
-    try {
-      await axios.post(`${BASE_URL}/submit`, {
-        sample_id: sample.sample_id, annotator, q1: scores.q1,
-        final_label: scores.q1 <= 3 ? label : null, round: 1,
-      });
-      fetchProgress(annotator, category);
-      fetchSubmittedIndices(annotator, category);
-      fetchClassification();
-      fetchDiscussionCount();
-      if (currentStep < total) {
-        await nextSample();
-      } else {
-        const pRes = await axios.get(`${BASE_URL}/progress?annotator=${annotator}&category=${category}`);
-        const remaining = pRes.data.total - pRes.data.done;
-        if (remaining > 0) {
-          const sRes = await axios.get(`${BASE_URL}/submitted_ids?annotator=${annotator}&category=${category}`);
-          const sSet = new Set(sRes.data.submitted_indices);
-          const first = [...Array(pRes.data.total).keys()].find(i => !sSet.has(i));
-          if (window.confirm(`⚠️ 미제출 샘플이 ${remaining}개 남아있습니다!\n이동할까요?`) && first !== undefined) {
-            const data = await fetchSampleByIndex(first, category);
-            await loadAnnotation(data, annotator);
-          }
-        } else {
-          alert("🎉 모든 문항을 완료했습니다!");
+# ─────────────────────────────────────────────
+#  기본 엔드포인트
+# ─────────────────────────────────────────────
+
+@app.get("/sample")
+def get_sample(index: int = 0, category: str = "ALL"):
+    filtered = get_filtered(category)
+    if not filtered: return {"error": "no samples"}
+    idx = max(0, min(index, len(filtered) - 1))
+    return {**filtered[idx], "current_index": idx + 1, "total": len(filtered)}
+
+@app.get("/next")
+def next_sample(index: int = 0, category: str = "ALL"):
+    filtered = get_filtered(category)
+    if not filtered: return {"error": "no samples"}
+    idx = min(index + 1, len(filtered) - 1)
+    return {**filtered[idx], "current_index": idx + 1, "total": len(filtered)}
+
+@app.get("/prev")
+def prev_sample(index: int = 0, category: str = "ALL"):
+    filtered = get_filtered(category)
+    if not filtered: return {"error": "no samples"}
+    idx = max(index - 1, 0)
+    return {**filtered[idx], "current_index": idx + 1, "total": len(filtered)}
+
+@app.get("/goto")
+def goto_sample(index: int = 0, category: str = "ALL"):
+    filtered = get_filtered(category)
+    if not filtered: return {"error": "no samples"}
+    idx = max(0, min(index, len(filtered) - 1))
+    return {**filtered[idx], "current_index": idx + 1, "total": len(filtered)}
+
+
+@app.get("/last_index")
+def get_last_index(annotator: str, category: str = "ALL"):
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        filtered = get_filtered(category)
+        submitted_ids = set(
+            r[0] for r in cursor.execute("""
+                SELECT DISTINCT sample_id FROM annotations
+                WHERE annotator=? AND (round IS NULL OR round = 1)
+            """, (annotator,)).fetchall()
+        )
+        last_idx = 0
+        for i, s in enumerate(filtered):
+            if s["sample_id"] in submitted_ids:
+                last_idx = i + 1
+        return {"last_index": min(last_idx, len(filtered) - 1)}
+    except Exception as e:
+        print(f"last_index 오류: {e}")
+        return {"last_index": 0}
+    finally:
+        conn.close()
+
+
+@app.post("/submit")
+def submit(data: dict):
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        sample_id = data["sample_id"]
+        annotator = data["annotator"]
+        q1 = data.get("q1")
+        final_label = data.get("final_label")
+
+        if q1 is None:
+            return {"status": "error", "message": "q1 is required"}
+        if q1 <= 3 and final_label not in ("F", "C", "M"):
+            return {"status": "error", "message": "final_label must be F/C/M when q1 <= 3"}
+        if q1 >= 4:
+            final_label = None
+
+        exists = cursor.execute("""
+            SELECT COUNT(*) FROM annotations
+            WHERE sample_id=? AND annotator=? AND (round IS NULL OR round = 1)
+        """, (sample_id, annotator)).fetchone()[0]
+
+        if exists > 0:
+            cursor.execute("""
+                UPDATE annotations SET final_label=?, q1=?
+                WHERE sample_id=? AND annotator=? AND (round IS NULL OR round = 1)
+            """, (final_label, q1, sample_id, annotator))
+        else:
+            cursor.execute("""
+                INSERT INTO annotations (sample_id, annotator, final_label, q1, round)
+                VALUES (?, ?, ?, ?, 1)
+            """, (sample_id, annotator, final_label, q1))
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"submit DB 오류: {e}")
+        return {"status": "error", "message": str(e)}
+    finally:
+        conn.close()
+
+    try:
+        annotator_dir = os.path.join(SAVE_DIR, f"Annotator_{annotator}")
+        os.makedirs(annotator_dir, exist_ok=True)
+        safe_sample_id = sample_id.replace("/", "_")
+        file_path = os.path.join(annotator_dir, f"{safe_sample_id}.jsonl")
+        record = {"sample_id": sample_id, "annotator": annotator, "q1": q1, "final_label": final_label}
+        existing_records = {}
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        rec = json.loads(line)
+                        existing_records[rec["annotator"]] = rec
+                    except Exception:
+                        continue
+        existing_records[annotator] = record
+        with open(file_path, "w", encoding="utf-8") as f:
+            for rec in existing_records.values():
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(f"파일 저장 오류: {e}")
+
+    return {"status": "saved"}
+
+
+@app.post("/exclude")
+def exclude_sample(data: dict):
+    sample_id = data.get("sample_id")
+    annotator = data.get("annotator")
+
+    if not sample_id or not annotator:
+        return {"status": "error", "message": "sample_id, annotator required"}
+
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        # excluded_samples 테이블 기록
+        cursor.execute("""
+            INSERT OR REPLACE INTO excluded_samples (sample_id, annotator, excluded_at)
+            VALUES (?, ?, ?)
+        """, (sample_id, annotator, datetime.utcnow().isoformat()))
+
+        # annotations에 q1=NULL로 저장 → raw data에 제외 반영
+        exists = cursor.execute("""
+            SELECT COUNT(*) FROM annotations
+            WHERE sample_id=? AND annotator=? AND (round IS NULL OR round = 1)
+        """, (sample_id, annotator)).fetchone()[0]
+
+        if exists > 0:
+            cursor.execute("""
+                UPDATE annotations SET final_label=NULL, q1=NULL
+                WHERE sample_id=? AND annotator=? AND (round IS NULL OR round = 1)
+            """, (sample_id, annotator))
+        else:
+            cursor.execute("""
+                INSERT INTO annotations (sample_id, annotator, final_label, q1, round)
+                VALUES (?, ?, NULL, NULL, 1)
+            """, (sample_id, annotator))
+
+        conn.commit()
+        return {"status": "excluded"}
+    except Exception as e:
+        conn.rollback()
+        return {"status": "error", "message": str(e)}
+    finally:
+        conn.close()
+
+
+@app.get("/annotation")
+def get_annotation(
+    sample_id: str = Query(...),
+    annotator: str = Query(...),
+    round_num: int = Query(1),
+):
+    return load_annotation_from_db(sample_id, annotator, round_num)
+
+
+@app.get("/submitted_ids")
+def get_submitted_ids(annotator: str, category: str = "ALL"):
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        rows = cursor.execute("""
+            SELECT DISTINCT sample_id FROM annotations
+            WHERE annotator=? AND (round IS NULL OR round = 1)
+        """, (annotator,)).fetchall()
+        submitted = set(r[0] for r in rows)
+        filtered = get_filtered(category)
+        return {
+            "submitted_indices": [i for i, s in enumerate(filtered) if s["sample_id"] in submitted]
         }
-      }
-    } catch (err) { console.error(err); alert("제출 실패"); }
-  };
+    except Exception as e:
+        print(f"submitted_ids 오류: {e}")
+        return {"submitted_indices": []}
+    finally:
+        conn.close()
 
-  const excludeSample = async () => {
-    if (!annotator) { alert("Annotator를 선택하세요"); return; }
-    if (!window.confirm("이 샘플을 제외하시겠습니까?\n제외하면 최종 데이터셋에 포함되지 않습니다.")) return;
-    try {
-      await axios.post(`${BASE_URL}/exclude`, {
-        sample_id: sample.sample_id, annotator,
-      });
-      fetchProgress(annotator, category);
-      fetchSubmittedIndices(annotator, category);
-      fetchClassification();
-      if (currentStep < total) await nextSample();
-      else alert("제외 처리 완료");
-    } catch { alert("제외 실패"); }
-  };
 
-  const jumpList = jumpCategory === "ALL" ? allSamples : allSamples.filter(s => s.category === jumpCategory);
-  const scoreDescriptions = { 5: "매우 적절함", 4: "적절함", 3: "보통", 2: "부적절함", 1: "매우 부적절함" };
-  const renderRadios = q => [1, 2, 3, 4, 5].map(n => (
-    <label key={n} className="radio">
-      <input type="radio" checked={scores[q] === n} onChange={() => setScore(q, n)} /> {n} : {scoreDescriptions[n]}
-    </label>
-  ));
+@app.get("/progress")
+def progress(annotator: str = None, category: str = None):
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        if category and category != "ALL":
+            total = cursor.execute(
+                "SELECT COUNT(*) FROM samples WHERE category=?", (category,)
+            ).fetchone()[0]
+        else:
+            total = cursor.execute("SELECT COUNT(*) FROM samples").fetchone()[0]
 
-  if (page === "admin") return <AdminPage onBack={() => setPage("main")} />;
-  if (page === "discussion") return (
-    <DiscussionPage
-      onBack={() => { setPage("main"); fetchClassification(); fetchDiscussionCount(); }}
-      allSamples={allSamples}
-    />
-  );
-  if (!sample) return null;
+        done = 0
+        if annotator:
+            if category and category != "ALL":
+                done = cursor.execute("""
+                    SELECT COUNT(DISTINCT a.sample_id)
+                    FROM annotations a JOIN samples s ON a.sample_id = s.sample_id
+                    WHERE a.annotator=? AND s.category=? AND (a.round IS NULL OR a.round = 1)
+                """, (annotator, category)).fetchone()[0]
+            else:
+                done = cursor.execute("""
+                    SELECT COUNT(DISTINCT sample_id) FROM annotations
+                    WHERE annotator=? AND (round IS NULL OR round = 1)
+                """, (annotator,)).fetchone()[0]
+        return {"done": done, "total": total}
+    except Exception as e:
+        print(f"progress 오류: {e}")
+        return {"done": 0, "total": 0}
+    finally:
+        conn.close()
 
-  const progressPct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
-  return (
-    <div className="container">
-      {/* HEADER */}
-      <div className="header">
-        <h1>News Sentence Human Evaluation</h1>
-        <div className="header-actions">
-          {annotator && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 12, color: "#6b7280" }}>내 진행도</span>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: `${progressPct}%` }} />
-              </div>
-              <span style={{ fontSize: 12, color: "#374151", fontWeight: 600 }}>
-                {progress.done}/{progress.total}
-              </span>
-            </div>
-          )}
-          <span style={{ fontSize: 12, color: "#9ca3af" }}>{currentStep} / {total}</span>
-          <button onClick={() => setPage("admin")} className="nav-btn" style={{ background: "#4f83f3", fontSize: 12 }}>
-            📊 대시보드
-          </button>
-          <button onClick={() => setPage("discussion")} className="nav-btn"
-            style={{
-              background: discussionCount > 0 ? "#f59e0b" : "#e5e7eb",
-              color: discussionCount > 0 ? "#fff" : "#6b7280",
-              fontSize: 12, position: "relative",
-            }}>
-            📋 Disagreement Set
-            {discussionCount > 0 && (
-              <span className="badge-count">{discussionCount > 99 ? "99+" : discussionCount}</span>
-            )}
-          </button>
-        </div>
-      </div>
+@app.get("/progress_detail")
+def progress_detail(category: str = "ALL"):
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        if category == "ALL":
+            total = cursor.execute("SELECT COUNT(*) FROM samples").fetchone()[0]
+        else:
+            total = cursor.execute(
+                "SELECT COUNT(*) FROM samples WHERE category=?", (category,)
+            ).fetchone()[0]
+        annotators = ["A", "B", "C", "D", "E"]
+        result = {}
+        for a in annotators:
+            if category == "ALL":
+                done = cursor.execute("""
+                    SELECT COUNT(DISTINCT sample_id) FROM annotations
+                    WHERE annotator=? AND (round IS NULL OR round = 1)
+                """, (a,)).fetchone()[0]
+            else:
+                done = cursor.execute("""
+                    SELECT COUNT(DISTINCT a.sample_id)
+                    FROM annotations a JOIN samples s ON a.sample_id = s.sample_id
+                    WHERE a.annotator=? AND s.category=? AND (a.round IS NULL OR a.round = 1)
+                """, (a, category)).fetchone()[0]
+            result[a] = {"done": done, "total": total}
+        return result
+    except Exception as e:
+        return {}
+    finally:
+        conn.close()
 
-      {/* 샘플 영역 */}
-      <div className="sample-top-card">
-        <div className="sample-top-meta">
-          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 13, color: "#6b7280" }}>
-              ID: <strong style={{ color: "#111827" }}>{sample.sample_id}</strong>
-            </span>
-            <span style={{ fontSize: 13, color: "#6b7280" }}>Article: {sample.article_id}</span>
-            <span className="llm-big">LLM: {sample.predicted}</span>
-            {currentStatus && (
-              <span className="status-badge" style={{
-                background: `${STATUS_LABELS[currentStatus.status]?.color}15`,
-                color: STATUS_LABELS[currentStatus.status]?.color,
-              }}>
-                {STATUS_LABELS[currentStatus.status]?.text}
-                {currentStatus.confirmed_label && ` (${currentStatus.confirmed_label})`}
-              </span>
-            )}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button onClick={prevSample} className="nav-btn" disabled={currentStep === 1}>← Prev</button>
-            <span style={{ fontSize: 12, color: "#9ca3af", minWidth: 60, textAlign: "center" }}>
-              {currentStep}/{total}
-            </span>
-            <button onClick={nextSample} className="nav-btn" disabled={currentStep === total}>Next →</button>
-          </div>
-        </div>
-        <div className="sample-sentences">
-          <div className="sentence-block">
-            <span className="sentence-label">Previous</span>
-            <span className="sentence-text muted">{sample.previous || "이전 문장이 없습니다."}</span>
-          </div>
-          <div className="sentence-block target-block">
-            <span className="sentence-label">Target</span>
-            <span className="sentence-text target-text">{sample.target}</span>
-          </div>
-          <div className="sentence-block">
-            <span className="sentence-label">Next</span>
-            <span className="sentence-text muted">{sample.next || "다음 문장이 없습니다."}</span>
-          </div>
-        </div>
-      </div>
 
-      {/* 하단: 가이드라인 + 평가 */}
-      <div className="main">
-        <div style={{ flex: "0 0 320px" }}><GuidelinePanel /></div>
+@app.get("/iaa")
+def get_iaa():
+    conn = get_db_conn()
+    try:
+        return _compute_all_iaa(conn)
+    except Exception as e:
+        return {"fleiss_kappa": 0, "alpha_q1": 0, "icc": 0, "alpha_label": 0}
+    finally:
+        conn.close()
 
-        <div className="card" style={{ flex: 1 }}>
-          <h2 style={{ margin: "0 0 12px 0", fontSize: 16, color: "#111827" }}>Evaluation</h2>
 
-          {/* 카테고리 */}
-          <div className="category-group">
-            {CATEGORIES.map(c => (
-              <button key={c} onClick={() => setCategory(c)} className={category === c ? "selected" : ""}>{c}</button>
-            ))}
-          </div>
+@app.get("/sample_classification")
+def sample_classification():
+    conn = get_db_conn()
+    try:
+        all_annotations = _get_all_annotations_raw(conn)
+        return _classify_samples(all_annotations)
+    except Exception as e:
+        return {}
+    finally:
+        conn.close()
 
-          {/* 샘플 Jump */}
-          <div style={{ marginBottom: 12 }}>
-            <button onClick={() => setJumpOpen(!jumpOpen)} className="nav-btn"
-              style={{ width: "100%", marginBottom: 6, background: "#e5e7eb", color: "#374151" }}>
-              📋 샘플 목록 {jumpOpen ? "▲" : "▼"}
-            </button>
-            {jumpOpen && (
-              <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 10, background: "#f9fafb" }}>
-                <div style={{ marginBottom: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
-                  {CATEGORIES.map(c => (
-                    <button key={c} onClick={() => setJumpCategory(c)}
-                      className={jumpCategory === c ? "selected" : ""}
-                      style={{ fontSize: 11, padding: "2px 6px" }}>{c}</button>
-                  ))}
-                </div>
-                <select style={{ width: "100%", padding: 8, background: "white", color: "#111827",
-                  border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12 }} size={8}
-                  onChange={async (e) => {
-                    const globalIdx = parseInt(e.target.value);
-                    const clicked = allSamples[globalIdx]; if (!clicked) return;
-                    const cat = clicked.category;
-                    const catList = allSamples.filter(s => s.category === cat);
-                    const catIdx = catList.findIndex(s => s.sample_id === clicked.sample_id);
-                    skipCategoryReset.current = true; setCategory(cat);
-                    const data = await fetchSampleByIndex(catIdx, cat);
-                    await loadAnnotation(data, annotator);
-                    fetchProgress(annotator, cat);
-                    if (annotator) fetchSubmittedIndices(annotator, cat);
-                    setJumpOpen(false);
-                  }}>
-                  {jumpList.map(s => {
-                    const globalIdx = allSamples.findIndex(o => o.sample_id === s.sample_id);
-                    const mySubmitted = annotator && submittedSampleIds.has(s.sample_id);
-                    const clf = sampleClassification[s.sample_id];
-                    const mark = clf?.status === "excluded" ? "🚫"
-                      : mySubmitted ? "✅"
-                      : clf?.status === "needs_discussion" ? "⚠️"
-                      : clf?.status === "discussion_resolved" ? "💬"
-                      : "⬜";
-                    return <option key={s.sample_id} value={globalIdx}>{mark} {s.sample_id}</option>;
-                  })}
-                </select>
-              </div>
-            )}
-          </div>
 
-          {/* Annotator */}
-          <div style={{ marginBottom: 14 }}>
-            <p style={{ fontWeight: 600, fontSize: 14, color: "#374151", marginBottom: 6 }}>
-              Annotator <span className="required">*</span>
-            </p>
-            <div className="annotator-group">
-              {ANNOTATORS.map(a => (
-                <button key={a} onClick={() => handleAnnotatorSelect(a)}
-                  className={`annotator-chip ${annotator === a ? "active" : ""}`}>
-                  Annotator {a}
-                </button>
-              ))}
-            </div>
-          </div>
+@app.get("/discussion_samples")
+def get_discussion_samples():
+    """Q1 1~3점 받은 샘플 목록 — 열람 전용 (다수결로 자동 확정)"""
+    conn = get_db_conn()
+    try:
+        all_annotations = _get_all_annotations_raw(conn)
+        classification = _classify_samples(all_annotations)
+        predicted_map = {s["sample_id"]: s.get("predicted") for s in samples}
 
-          {/* 제출 여부 */}
-          {annotator && (
-            <div style={{ marginBottom: 10, fontSize: 12, fontWeight: 600,
-              color: submittedIndices.has(currentIndex) ? "#16a34a" : "#9ca3af" }}>
-              {submittedIndices.has(currentIndex) ? "✅ 이미 제출한 샘플입니다" : "⬜ 미제출 샘플입니다"}
-            </div>
-          )}
+        by_sample = defaultdict(list)
+        for ann in all_annotations:
+            by_sample[ann["sample_id"]].append(ann)
 
-          {/* Q1 */}
-          <div className="question">
-            <p>Q. LLM이 부여한 라벨이 적절한가? <span className="required">*</span></p>
-            <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6 }}>
-              4~5점: LLM 라벨({sample.predicted}) 그대로 집계 &nbsp;|&nbsp; 1~3점: 아래에서 직접 라벨 선택
-            </div>
-            {renderRadios("q1")}
-          </div>
+        result = []
+        for sid, anns in by_sample.items():
+            q1_scores = [a["q1"] for a in anns if a["q1"] is not None]
+            if not q1_scores:
+                continue
+            if not any(q <= 3 for q in q1_scores):
+                continue  # 모두 4~5점 → disagreement 아님
 
-          {/* Final Label (q1 <= 3일 때만) */}
-          {scores.q1 !== null && scores.q1 <= 3 && (
-            <div className="question">
-              <p>Final Label <span className="required">*</span>
-                <span style={{ fontSize: 11, color: "#d97706", marginLeft: 6 }}>
-                  (Q1 1~3점 → 직접 라벨 선택)
-                </span>
-              </p>
-              <div className="label-group">
-                {["F", "C", "M"].map(l => (
-                  <button key={l} onClick={() => setLabel(l)}
-                    className={`label-btn ${label === l ? "active" : ""}`}>{l}</button>
-                ))}
-              </div>
-            </div>
-          )}
+            clf = classification.get(sid, {"status": "in_progress", "confirmed_label": None})
 
-          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-            <button className="submit-btn" onClick={submit} style={{ flex: 1 }}>Submit</button>
-            <button onClick={excludeSample}
-              style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 8,
-                padding: "8px 14px", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
-              🚫 제외
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+            ann_details = []
+            for a in sorted(anns, key=lambda x: x["annotator"]):
+                effective_label = a["final_label"]
+                if a["q1"] is not None and a["q1"] >= 4:
+                    effective_label = predicted_map.get(sid)
+                ann_details.append({
+                    "annotator": a["annotator"],
+                    "q1": a["q1"],
+                    "label": effective_label,
+                })
 
-export default App;
+            resolved = clf["status"] == "discussion_resolved"
+            result.append({
+                "sample_id": sid,
+                "predicted": predicted_map.get(sid),
+                "annotations": ann_details,
+                "resolved": resolved,
+                "decided_label": clf["confirmed_label"] if resolved else None,
+                "status": clf["status"],
+            })
+
+        result.sort(key=lambda x: (x["resolved"], x["sample_id"]))
+        return {
+            "samples": result,
+            "total": len(result),
+            "resolved_count": sum(1 for r in result if r["resolved"])
+        }
+    except Exception as e:
+        print(f"discussion_samples 오류: {e}")
+        return {"samples": [], "total": 0, "resolved_count": 0}
+    finally:
+        conn.close()
+
+
+@app.get("/admin")
+def admin_dashboard():
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        annotators = ["A", "B", "C", "D", "E"]
+        total = cursor.execute("SELECT COUNT(*) FROM samples").fetchone()[0]
+
+        progress_data = {}
+        for a in annotators:
+            done = cursor.execute("""
+                SELECT COUNT(DISTINCT sample_id) FROM annotations
+                WHERE annotator=? AND (round IS NULL OR round = 1)
+            """, (a,)).fetchone()[0]
+            progress_data[a] = {
+                "done": done, "total": total,
+                "percent": round(done / total * 100, 1) if total else 0,
+            }
+
+        categories = cursor.execute("SELECT DISTINCT category FROM samples").fetchall()
+        category_data = {}
+        for (cat,) in categories:
+            cat_total = cursor.execute(
+                "SELECT COUNT(*) FROM samples WHERE category=?", (cat,)
+            ).fetchone()[0]
+            cat_done = {}
+            for a in annotators:
+                done = cursor.execute("""
+                    SELECT COUNT(DISTINCT a.sample_id)
+                    FROM annotations a JOIN samples s ON a.sample_id = s.sample_id
+                    WHERE a.annotator=? AND s.category=? AND (a.round IS NULL OR a.round = 1)
+                """, (a, cat)).fetchone()[0]
+                cat_done[a] = done
+            category_data[cat] = {"total": cat_total, "by_annotator": cat_done}
+
+        iaa = _compute_all_iaa(conn)
+        all_annotations = _get_all_annotations_raw(conn)
+        classification = _classify_samples(all_annotations)
+        classification_counts = dict(Counter(info["status"] for info in classification.values()))
+
+        return {
+            "total_samples": total,
+            "progress": progress_data,
+            "category_progress": category_data,
+            "iaa": iaa,
+            "classification": classification_counts,
+        }
+    except Exception as e:
+        print(f"admin 오류: {e}")
+        return {
+            "total_samples": 0, "progress": {}, "category_progress": {},
+            "iaa": {"fleiss_kappa": 0, "alpha_q1": 0, "icc": 0, "alpha_label": 0},
+            "classification": {},
+        }
+    finally:
+        conn.close()
+
+
+@app.get("/db_query")
+def db_query(
+    sample_id: str = None, annotator: str = None,
+    round_num: int = None, limit: int = 200, offset: int = 0,
+):
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        where_clauses, params = [], []
+        if sample_id:
+            where_clauses.append("sample_id LIKE ?")
+            params.append(f"%{sample_id}%")
+        if annotator:
+            where_clauses.append("annotator = ?")
+            params.append(annotator)
+        if round_num is not None:
+            where_clauses.append("(round = ? OR (round IS NULL AND ? = 1))")
+            params.extend([round_num, round_num])
+        where_sql = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+        total = cursor.execute(f"SELECT COUNT(*) FROM annotations{where_sql}", params).fetchone()[0]
+        rows = cursor.execute(f"""
+            SELECT sample_id, annotator, final_label, q1, round
+            FROM annotations{where_sql}
+            ORDER BY sample_id, annotator LIMIT ? OFFSET ?
+        """, params + [limit, offset]).fetchall()
+        return {
+            "total": total, "limit": limit, "offset": offset,
+            "data": [
+                {"sample_id": r[0], "annotator": r[1], "final_label": r[2],
+                 "q1": r[3], "round": r[4] if r[4] is not None else 1}
+                for r in rows
+            ],
+        }
+    except Exception as e:
+        return {"total": 0, "limit": limit, "offset": offset, "data": []}
+    finally:
+        conn.close()
+
+
+@app.get("/annotations")
+def get_all_annotations(annotator: str = None):
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        if annotator:
+            rows = cursor.execute("""
+                SELECT sample_id, annotator, final_label, q1, round
+                FROM annotations WHERE annotator=? ORDER BY sample_id
+            """, (annotator,)).fetchall()
+        else:
+            rows = cursor.execute("""
+                SELECT sample_id, annotator, final_label, q1, round
+                FROM annotations ORDER BY sample_id, annotator
+            """).fetchall()
+        return [
+            {"sample_id": r[0], "annotator": r[1], "final_label": r[2],
+             "q1": r[3], "round": r[4] if r[4] is not None else 1}
+            for r in rows
+        ]
+    except Exception as e:
+        return []
+    finally:
+        conn.close()
+
+
+@app.get("/export/csv")
+def export_csv():
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        rows = cursor.execute("""
+            SELECT sample_id, annotator, final_label, q1, round
+            FROM annotations ORDER BY sample_id, annotator
+        """).fetchall()
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["sample_id", "annotator", "final_label", "q1", "round"])
+        writer.writerows((r[0], r[1], r[2], r[3], r[4] if r[4] is not None else 1) for r in rows)
+        output.seek(0)
+        return StreamingResponse(
+            output, media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=annotations.csv"},
+        )
+    finally:
+        conn.close()
+
+
+@app.get("/export/json")
+def export_json():
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        rows = cursor.execute("""
+            SELECT sample_id, annotator, final_label, q1, round
+            FROM annotations ORDER BY sample_id, annotator
+        """).fetchall()
+        data = [
+            {"sample_id": r[0], "annotator": r[1], "final_label": r[2],
+             "q1": r[3], "round": r[4] if r[4] is not None else 1}
+            for r in rows
+        ]
+        output = io.StringIO()
+        json.dump(data, output, ensure_ascii=False, indent=2)
+        output.seek(0)
+        return StreamingResponse(
+            output, media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=annotations.json"},
+        )
+    finally:
+        conn.close()
+
+
+@app.get("/export/final_dataset")
+def export_final_dataset():
+    """
+    최종 데이터셋: confirmed + discussion_resolved 샘플
+    다수결로 자동 결정된 라벨 사용
+    형식: sample_id, target_sentence, label, prev_sentence, next_sentence
+    """
+    conn = get_db_conn()
+    try:
+        all_annotations = _get_all_annotations_raw(conn)
+        classification = _classify_samples(all_annotations)
+
+        sample_map = {s["sample_id"]: s for s in samples}
+        result = []
+
+        for sid, clf in classification.items():
+            if clf["status"] not in ("confirmed", "discussion_resolved"):
+                continue
+            s = sample_map.get(sid)
+            if not s:
+                continue
+            result.append({
+                "sample_id": sid,
+                "target_sentence": s["target"],
+                "label": clf["confirmed_label"],
+                "prev_sentence": s["previous"] or "",
+                "next_sentence": s["next"] or "",
+            })
+
+        result.sort(key=lambda x: x["sample_id"])
+        output = io.StringIO()
+        json.dump(result, output, ensure_ascii=False, indent=2)
+        output.seek(0)
+        return StreamingResponse(
+            output, media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=final_dataset.json"},
+        )
+    except Exception as e:
+        print(f"export_final_dataset 오류: {e}")
+        return StreamingResponse(io.StringIO("[]"), media_type="application/json")
+    finally:
+        conn.close()
+
+
+@app.get("/samples")
+def get_samples_list():
+    return [{"sample_id": s["sample_id"], "category": s["category"]} for s in samples]
+
+
+@app.post("/restore")
+async def restore_annotations(request: dict):
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        rows = request.get("data", [])
+        count = 0
+        for row in rows:
+            q1_val = row.get("q1")
+            q1_int = int(q1_val) if q1_val is not None else None
+            exists = cursor.execute("""
+                SELECT COUNT(*) FROM annotations
+                WHERE sample_id=? AND annotator=? AND (round IS NULL OR round = 1)
+            """, (row["sample_id"], row["annotator"])).fetchone()[0]
+            if exists > 0:
+                cursor.execute("""
+                    UPDATE annotations SET final_label=?, q1=?
+                    WHERE sample_id=? AND annotator=? AND (round IS NULL OR round = 1)
+                """, (row.get("final_label"), q1_int, row["sample_id"], row["annotator"]))
+            else:
+                cursor.execute("""
+                    INSERT INTO annotations (sample_id, annotator, final_label, q1, round)
+                    VALUES (?, ?, ?, ?, 1)
+                """, (row["sample_id"], row["annotator"], row.get("final_label"), q1_int))
+            count += 1
+        conn.commit()
+        return {"status": "restored", "count": count}
+    except Exception as e:
+        conn.rollback()
+        return {"status": "error", "message": str(e)}
+    finally:
+        conn.close()
