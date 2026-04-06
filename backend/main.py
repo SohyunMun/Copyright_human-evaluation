@@ -140,8 +140,7 @@ def _classify_samples(all_annotations):
 
     for sid, anns in by_sample.items():
         # 1명이라도 q1=NULL(제외) → excluded
-        has_excluded = any(a["q1"] is None for a in anns)
-        if has_excluded:
+        if any(a["q1"] is None for a in anns):
             results[sid] = {"status": "excluded", "confirmed_label": None}
             continue
 
@@ -152,7 +151,6 @@ def _classify_samples(all_annotations):
             results[sid] = {"status": "in_progress", "confirmed_label": None}
             continue
 
-        # 3명 미만 → 진행 중
         if len(anns) < 3:
             results[sid] = {"status": "in_progress", "confirmed_label": None}
             continue
@@ -176,17 +174,22 @@ def _classify_samples(all_annotations):
         has_disagreement = any(q <= 3 for q in q1_scores)
 
         if top_count > len(labels) / 2:
-            # 과반수 달성
             status = "confirmed" if not has_disagreement else "discussion_resolved"
             results[sid] = {"status": status, "confirmed_label": top_label}
         else:
-            # 과반수 없음 → 수동 확인 필요
             results[sid] = {"status": "needs_discussion", "confirmed_label": None}
 
     return results
 
 
 def _build_iaa_data(conn):
+    """
+    IAA 계산용 데이터 구축
+    - 라벨 기반: q1>=4 → LLM 라벨, q1<=3 → 직접 선택 라벨, q1=NULL → 제외
+    - 점수 기반: q1=NULL → 제외
+    """
+    predicted_map = {s["sample_id"]: s.get("predicted") for s in samples}
+
     cursor = conn.cursor()
     rows = cursor.execute("""
         SELECT sample_id, annotator, final_label, q1 FROM annotations
@@ -197,12 +200,21 @@ def _build_iaa_data(conn):
     label_dict = defaultdict(list)
 
     for sample_id, annotator, label, q1 in rows:
+        # 제외 처리(q1=NULL)는 모든 IAA에서 제외
         if q1 is None:
             continue
+
+        # Q1 점수 기반 (전체, 제외 샘플 제외)
         score_dict[sample_id].append((annotator, label, q1))
-        if q1 <= 3 and label in ("F", "C", "M"):
+
+        # 라벨 기반: q1>=4 → LLM 라벨, q1<=3 → 직접 선택 라벨
+        predicted = predicted_map.get(sample_id)
+        if q1 >= 4 and predicted in ("F", "C", "M"):
+            label_dict[sample_id].append((annotator, predicted, q1))
+        elif q1 <= 3 and label in ("F", "C", "M"):
             label_dict[sample_id].append((annotator, label, q1))
 
+    # 3명 이상 제출한 샘플만
     score_filtered = {
         sid: items for sid, items in score_dict.items()
         if len(set(a for a, _, _ in items)) >= 3
@@ -383,13 +395,11 @@ def exclude_sample(data: dict):
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
-        # excluded_samples 테이블 기록
         cursor.execute("""
             INSERT OR REPLACE INTO excluded_samples (sample_id, annotator, excluded_at)
             VALUES (?, ?, ?)
         """, (sample_id, annotator, datetime.utcnow().isoformat()))
 
-        # annotations에 q1=NULL로 저장 → raw data에 제외 반영
         exists = cursor.execute("""
             SELECT COUNT(*) FROM annotations
             WHERE sample_id=? AND annotator=? AND (round IS NULL OR round = 1)
@@ -536,7 +546,6 @@ def sample_classification():
 
 @app.get("/discussion_samples")
 def get_discussion_samples():
-    """Q1 1~3점 받은 샘플 목록 — 열람 전용 (다수결로 자동 확정)"""
     conn = get_db_conn()
     try:
         all_annotations = _get_all_annotations_raw(conn)
@@ -553,7 +562,7 @@ def get_discussion_samples():
             if not q1_scores:
                 continue
             if not any(q <= 3 for q in q1_scores):
-                continue  # 모두 4~5점 → disagreement 아님
+                continue
 
             clf = classification.get(sid, {"status": "in_progress", "confirmed_label": None})
 
@@ -631,12 +640,29 @@ def admin_dashboard():
         classification = _classify_samples(all_annotations)
         classification_counts = dict(Counter(info["status"] for info in classification.values()))
 
+        # 어노테이터별 제외 개수
+        excluded_by_annotator = {}
+        for a in annotators:
+            cnt = cursor.execute("""
+                SELECT COUNT(*) FROM annotations
+                WHERE annotator=? AND q1 IS NULL AND (round IS NULL OR round = 1)
+            """, (a,)).fetchone()[0]
+            excluded_by_annotator[a] = cnt
+
+        # 제외된 고유 샘플 수 (1명이라도 제외한 샘플)
+        excluded_sample_count = cursor.execute("""
+            SELECT COUNT(DISTINCT sample_id) FROM annotations
+            WHERE q1 IS NULL AND (round IS NULL OR round = 1)
+        """).fetchone()[0]
+
         return {
             "total_samples": total,
             "progress": progress_data,
             "category_progress": category_data,
             "iaa": iaa,
             "classification": classification_counts,
+            "excluded_by_annotator": excluded_by_annotator,
+            "excluded_sample_count": excluded_sample_count,
         }
     except Exception as e:
         print(f"admin 오류: {e}")
@@ -644,6 +670,8 @@ def admin_dashboard():
             "total_samples": 0, "progress": {}, "category_progress": {},
             "iaa": {"fleiss_kappa": 0, "alpha_q1": 0, "icc": 0, "alpha_label": 0},
             "classification": {},
+            "excluded_by_annotator": {},
+            "excluded_sample_count": 0,
         }
     finally:
         conn.close()
@@ -763,19 +791,12 @@ def export_json():
 
 @app.get("/export/final_dataset")
 def export_final_dataset():
-    """
-    최종 데이터셋: confirmed + discussion_resolved 샘플
-    다수결로 자동 결정된 라벨 사용
-    형식: sample_id, target_sentence, label, prev_sentence, next_sentence
-    """
     conn = get_db_conn()
     try:
         all_annotations = _get_all_annotations_raw(conn)
         classification = _classify_samples(all_annotations)
-
         sample_map = {s["sample_id"]: s for s in samples}
         result = []
-
         for sid, clf in classification.items():
             if clf["status"] not in ("confirmed", "discussion_resolved"):
                 continue
@@ -789,7 +810,6 @@ def export_final_dataset():
                 "prev_sentence": s["previous"] or "",
                 "next_sentence": s["next"] or "",
             })
-
         result.sort(key=lambda x: x["sample_id"])
         output = io.StringIO()
         json.dump(result, output, ensure_ascii=False, indent=2)
