@@ -111,7 +111,6 @@ function DiscussionPage({ onBack, allSamples }) {
       </div>
 
       <div className="main">
-        {/* LEFT: 목록 */}
         <div className="card relabel-list">
           {loading ? (
             <p style={{ color: "#9ca3af" }}>로딩 중...</p>
@@ -163,7 +162,6 @@ function DiscussionPage({ onBack, allSamples }) {
           )}
         </div>
 
-        {/* RIGHT: 상세 — 열람 전용 */}
         <div className="card" style={{ flex: 1 }}>
           {!selected ? (
             <div style={{ textAlign: "center", padding: "60px 20px", color: "#9ca3af" }}>
@@ -180,11 +178,8 @@ function DiscussionPage({ onBack, allSamples }) {
                 </div>
               </div>
 
-              {/* 어노테이터별 응답 */}
               <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: 12, marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, color: "#374151", marginBottom: 8, fontSize: 13 }}>
-                  어노테이터별 응답
-                </div>
+                <div style={{ fontWeight: 700, color: "#374151", marginBottom: 8, fontSize: 13 }}>어노테이터별 응답</div>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                   <thead>
                     <tr style={{ background: "#f1f5f9" }}>
@@ -209,21 +204,17 @@ function DiscussionPage({ onBack, allSamples }) {
                     ))}
                   </tbody>
                 </table>
-
-                {/* 다수결 결과 */}
-                {selected.resolved && (
+                {selected.resolved ? (
                   <div style={{ marginTop: 10, padding: "8px 12px", background: "#eff6ff", borderRadius: 6, fontSize: 12, color: "#1e40af", fontWeight: 600 }}>
                     ✅ 다수결 자동 확정 라벨: <span style={{ fontSize: 14 }}>{selected.decided_label}</span>
                   </div>
-                )}
-                {!selected.resolved && (
+                ) : (
                   <div style={{ marginTop: 10, padding: "8px 12px", background: "#fef9c3", borderRadius: 6, fontSize: 12, color: "#854d0e" }}>
                     ⚠️ 아직 과반수 합의 미달 — 더 많은 어노테이터의 응답이 필요합니다
                   </div>
                 )}
               </div>
 
-              {/* 샘플 텍스트 */}
               {sampleDetail && (
                 <div style={{ marginBottom: 16 }}>
                   <p className="label">Previous Sentence</p>
@@ -302,18 +293,36 @@ function AdminPage({ onBack }) {
                 <span style={{ fontSize: 12, color: "#6b7280", minWidth: 130 }}>
                   {p.done} / {p.total} ({p.percent}%)
                 </span>
+                {(adminData.excluded_by_annotator?.[a] || 0) > 0 && (
+                  <span style={{ fontSize: 11, color: "#6b7280" }}>
+                    🚫 {adminData.excluded_by_annotator[a]}개 제외
+                  </span>
+                )}
               </div>
             );
           })}
+          {(adminData.excluded_sample_count || 0) > 0 && (
+            <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280", padding: "6px 10px", background: "#f9fafb", borderRadius: 6 }}>
+              🚫 제외된 샘플 (1명 이상 제외): <strong>{adminData.excluded_sample_count}개</strong>
+            </div>
+          )}
 
           {/* IAA */}
           <h2 className="dash-section-title" style={{ marginTop: 28 }}>IAA (어노테이터 간 일치도)</h2>
+          <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 10, lineHeight: 1.6 }}>
+            • <strong>라벨 일치도</strong>: Q1 4~5점 → LLM 라벨, Q1 1~3점 → 직접 선택 라벨 기준 (제외 샘플 제외)<br />
+            • <strong>점수 일치도</strong>: 전체 Q1 점수 기준 (제외 샘플 제외)
+          </div>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
             {[
-              ["Fleiss κ (Label)", adminData.iaa.fleiss_kappa, `라벨 일치도 (Disagreement ${adminData.iaa.label_sample_count || 0}개 기준)`],
-              ["Krippendorff α (Label)", adminData.iaa.alpha_label, `라벨 일치도 (Disagreement ${adminData.iaa.label_sample_count || 0}개 기준)`],
-              ["Krippendorff α (Score)", adminData.iaa.alpha_q1, `Q1 점수 일치도 (전체 ${adminData.iaa.score_sample_count || 0}개 기준)`],
-              ["ICC(2,1) (Score)", adminData.iaa.icc, `Q1 점수 절대 일치도 (전체 ${adminData.iaa.score_sample_count || 0}개 기준)`],
+              ["Fleiss κ (Label)", adminData.iaa.fleiss_kappa,
+                `라벨 일치도 (${adminData.iaa.label_sample_count || 0}개 샘플 기준)`],
+              ["Krippendorff α (Label)", adminData.iaa.alpha_label,
+                `라벨 일치도 (${adminData.iaa.label_sample_count || 0}개 샘플 기준)`],
+              ["Krippendorff α (Score)", adminData.iaa.alpha_q1,
+                `Q1 점수 일치도 (${adminData.iaa.score_sample_count || 0}개 샘플 기준)`],
+              ["ICC(2,1) (Score)", adminData.iaa.icc,
+                `Q1 점수 절대 일치도 (${adminData.iaa.score_sample_count || 0}개 샘플 기준)`],
             ].map(([lbl, val, desc]) => (
               <div key={lbl} className="dashboard-card">
                 <div className="dashboard-metric-label">{lbl}</div>
@@ -348,11 +357,11 @@ function AdminPage({ onBack }) {
               </div>
               <div className="classification-guide">
                 <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 12 }}>분류 기준 안내</div>
-                <div>• <strong>확정</strong>: 3명 이상 제출 + 모두 Q1 4~5점 → 다수결로 라벨 확정</div>
-                <div>• <strong>Disagreement Resolved</strong>: 1명이라도 Q1 1~3점이지만 다수결(과반수) 라벨 확정</div>
+                <div>• <strong>확정</strong>: 3명 이상 + 모두 Q1 4~5점 → 다수결로 LLM 라벨 확정</div>
+                <div>• <strong>Disagreement Resolved</strong>: 1명이라도 Q1 1~3점이지만 과반수 동일 라벨 확정</div>
                 <div>• <strong>Disagreement (합의 미달)</strong>: 과반수 라벨 없음 → 더 많은 응답 필요</div>
                 <div>• <strong>진행 중</strong>: 아직 3명 미만 제출</div>
-                <div>• <strong>제외</strong>: 1명이라도 제외 버튼 클릭</div>
+                <div>• <strong>제외</strong>: 1명이라도 제외 버튼 클릭 → 최종 데이터셋 미포함</div>
               </div>
             </>
           ) : (
@@ -419,7 +428,7 @@ function AdminPage({ onBack }) {
                                 color: row.final_label === "C" ? "#dc2626" : row.final_label === "M" ? "#d97706" : "#2563eb" }}>
                                 {row.final_label || "-"}
                               </td>
-                              <td style={{ padding: "3px 6px" }}>{row.q1 ?? "제외"}</td>
+                              <td style={{ padding: "3px 6px" }}>{row.q1 ?? "🚫 제외"}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -583,289 +592,4 @@ function App() {
     setAnnotator(a); localStorage.setItem("annotator", a);
     fetchProgress(a, category); fetchSubmittedIndices(a, category);
     const res = await axios.get(`${BASE_URL}/last_index?annotator=${a}&category=${category}`);
-    const data = await fetchSampleByIndex(res.data.last_index, category);
-    await loadAnnotation(data, a);
-  };
-
-  const nextSample = async () => {
-    if (currentStep >= total) return;
-    const data = await fetchSampleByIndex(currentIndex + 1, category);
-    await loadAnnotation(data, annotator);
-  };
-  const prevSample = async () => {
-    if (currentStep <= 1) return;
-    const data = await fetchSampleByIndex(currentIndex - 1, category);
-    await loadAnnotation(data, annotator);
-  };
-
-  const setScore = (key, value) => setScores({ ...scores, [key]: value });
-
-  const submit = async () => {
-    if (!annotator) { alert("Annotator를 선택하세요"); return; }
-    if (scores.q1 === null) { alert("Q1 점수를 선택해주세요"); return; }
-    if (scores.q1 <= 3 && label === "") { alert("Q1이 1~3점인 경우 Final Label을 선택해야 합니다"); return; }
-    try {
-      await axios.post(`${BASE_URL}/submit`, {
-        sample_id: sample.sample_id, annotator, q1: scores.q1,
-        final_label: scores.q1 <= 3 ? label : null, round: 1,
-      });
-      fetchProgress(annotator, category);
-      fetchSubmittedIndices(annotator, category);
-      fetchClassification();
-      fetchDiscussionCount();
-      if (currentStep < total) {
-        await nextSample();
-      } else {
-        const pRes = await axios.get(`${BASE_URL}/progress?annotator=${annotator}&category=${category}`);
-        const remaining = pRes.data.total - pRes.data.done;
-        if (remaining > 0) {
-          const sRes = await axios.get(`${BASE_URL}/submitted_ids?annotator=${annotator}&category=${category}`);
-          const sSet = new Set(sRes.data.submitted_indices);
-          const first = [...Array(pRes.data.total).keys()].find(i => !sSet.has(i));
-          if (window.confirm(`⚠️ 미제출 샘플이 ${remaining}개 남아있습니다!\n이동할까요?`) && first !== undefined) {
-            const data = await fetchSampleByIndex(first, category);
-            await loadAnnotation(data, annotator);
-          }
-        } else {
-          alert("🎉 모든 문항을 완료했습니다!");
-        }
-      }
-    } catch (err) { console.error(err); alert("제출 실패"); }
-  };
-
-  const excludeSample = async () => {
-    if (!annotator) { alert("Annotator를 선택하세요"); return; }
-    if (!window.confirm("이 샘플을 제외하시겠습니까?\n제외하면 최종 데이터셋에 포함되지 않습니다.")) return;
-    try {
-      await axios.post(`${BASE_URL}/exclude`, {
-        sample_id: sample.sample_id, annotator,
-      });
-      fetchProgress(annotator, category);
-      fetchSubmittedIndices(annotator, category);
-      fetchClassification();
-      if (currentStep < total) await nextSample();
-      else alert("제외 처리 완료");
-    } catch { alert("제외 실패"); }
-  };
-
-  const jumpList = jumpCategory === "ALL" ? allSamples : allSamples.filter(s => s.category === jumpCategory);
-  const scoreDescriptions = { 5: "매우 적절함", 4: "적절함", 3: "보통", 2: "부적절함", 1: "매우 부적절함" };
-  const renderRadios = q => [1, 2, 3, 4, 5].map(n => (
-    <label key={n} className="radio">
-      <input type="radio" checked={scores[q] === n} onChange={() => setScore(q, n)} /> {n} : {scoreDescriptions[n]}
-    </label>
-  ));
-
-  if (page === "admin") return <AdminPage onBack={() => setPage("main")} />;
-  if (page === "discussion") return (
-    <DiscussionPage
-      onBack={() => { setPage("main"); fetchClassification(); fetchDiscussionCount(); }}
-      allSamples={allSamples}
-    />
-  );
-  if (!sample) return null;
-
-  const progressPct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
-
-  return (
-    <div className="container">
-      {/* HEADER */}
-      <div className="header">
-        <h1>News Sentence Human Evaluation</h1>
-        <div className="header-actions">
-          {annotator && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 12, color: "#6b7280" }}>내 진행도</span>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: `${progressPct}%` }} />
-              </div>
-              <span style={{ fontSize: 12, color: "#374151", fontWeight: 600 }}>
-                {progress.done}/{progress.total}
-              </span>
-            </div>
-          )}
-          <span style={{ fontSize: 12, color: "#9ca3af" }}>{currentStep} / {total}</span>
-          <button onClick={() => setPage("admin")} className="nav-btn" style={{ background: "#4f83f3", fontSize: 12 }}>
-            📊 대시보드
-          </button>
-          <button onClick={() => setPage("discussion")} className="nav-btn"
-            style={{
-              background: discussionCount > 0 ? "#f59e0b" : "#e5e7eb",
-              color: discussionCount > 0 ? "#fff" : "#6b7280",
-              fontSize: 12, position: "relative",
-            }}>
-            📋 Disagreement Set
-            {discussionCount > 0 && (
-              <span className="badge-count">{discussionCount > 99 ? "99+" : discussionCount}</span>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* 샘플 영역 */}
-      <div className="sample-top-card">
-        <div className="sample-top-meta">
-          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 13, color: "#6b7280" }}>
-              ID: <strong style={{ color: "#111827" }}>{sample.sample_id}</strong>
-            </span>
-            <span style={{ fontSize: 13, color: "#6b7280" }}>Article: {sample.article_id}</span>
-            <span className="llm-big">LLM: {sample.predicted}</span>
-            {currentStatus && (
-              <span className="status-badge" style={{
-                background: `${STATUS_LABELS[currentStatus.status]?.color}15`,
-                color: STATUS_LABELS[currentStatus.status]?.color,
-              }}>
-                {STATUS_LABELS[currentStatus.status]?.text}
-                {currentStatus.confirmed_label && ` (${currentStatus.confirmed_label})`}
-              </span>
-            )}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button onClick={prevSample} className="nav-btn" disabled={currentStep === 1}>← Prev</button>
-            <span style={{ fontSize: 12, color: "#9ca3af", minWidth: 60, textAlign: "center" }}>
-              {currentStep}/{total}
-            </span>
-            <button onClick={nextSample} className="nav-btn" disabled={currentStep === total}>Next →</button>
-          </div>
-        </div>
-        <div className="sample-sentences">
-          <div className="sentence-block">
-            <span className="sentence-label">Previous</span>
-            <span className="sentence-text muted">{sample.previous || "이전 문장이 없습니다."}</span>
-          </div>
-          <div className="sentence-block target-block">
-            <span className="sentence-label">Target</span>
-            <span className="sentence-text target-text">{sample.target}</span>
-          </div>
-          <div className="sentence-block">
-            <span className="sentence-label">Next</span>
-            <span className="sentence-text muted">{sample.next || "다음 문장이 없습니다."}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 하단: 가이드라인 + 평가 */}
-      <div className="main">
-        <div style={{ flex: "0 0 320px" }}><GuidelinePanel /></div>
-
-        <div className="card" style={{ flex: 1 }}>
-          <h2 style={{ margin: "0 0 12px 0", fontSize: 16, color: "#111827" }}>Evaluation</h2>
-
-          {/* 카테고리 */}
-          <div className="category-group">
-            {CATEGORIES.map(c => (
-              <button key={c} onClick={() => setCategory(c)} className={category === c ? "selected" : ""}>{c}</button>
-            ))}
-          </div>
-
-          {/* 샘플 Jump */}
-          <div style={{ marginBottom: 12 }}>
-            <button onClick={() => setJumpOpen(!jumpOpen)} className="nav-btn"
-              style={{ width: "100%", marginBottom: 6, background: "#e5e7eb", color: "#374151" }}>
-              📋 샘플 목록 {jumpOpen ? "▲" : "▼"}
-            </button>
-            {jumpOpen && (
-              <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 10, background: "#f9fafb" }}>
-                <div style={{ marginBottom: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
-                  {CATEGORIES.map(c => (
-                    <button key={c} onClick={() => setJumpCategory(c)}
-                      className={jumpCategory === c ? "selected" : ""}
-                      style={{ fontSize: 11, padding: "2px 6px" }}>{c}</button>
-                  ))}
-                </div>
-                <select style={{ width: "100%", padding: 8, background: "white", color: "#111827",
-                  border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12 }} size={8}
-                  onChange={async (e) => {
-                    const globalIdx = parseInt(e.target.value);
-                    const clicked = allSamples[globalIdx]; if (!clicked) return;
-                    const cat = clicked.category;
-                    const catList = allSamples.filter(s => s.category === cat);
-                    const catIdx = catList.findIndex(s => s.sample_id === clicked.sample_id);
-                    skipCategoryReset.current = true; setCategory(cat);
-                    const data = await fetchSampleByIndex(catIdx, cat);
-                    await loadAnnotation(data, annotator);
-                    fetchProgress(annotator, cat);
-                    if (annotator) fetchSubmittedIndices(annotator, cat);
-                    setJumpOpen(false);
-                  }}>
-                  {jumpList.map(s => {
-                    const globalIdx = allSamples.findIndex(o => o.sample_id === s.sample_id);
-                    const mySubmitted = annotator && submittedSampleIds.has(s.sample_id);
-                    const clf = sampleClassification[s.sample_id];
-                    const mark = clf?.status === "excluded" ? "🚫"
-                      : mySubmitted ? "✅"
-                      : clf?.status === "needs_discussion" ? "⚠️"
-                      : clf?.status === "discussion_resolved" ? "💬"
-                      : "⬜";
-                    return <option key={s.sample_id} value={globalIdx}>{mark} {s.sample_id}</option>;
-                  })}
-                </select>
-              </div>
-            )}
-          </div>
-
-          {/* Annotator */}
-          <div style={{ marginBottom: 14 }}>
-            <p style={{ fontWeight: 600, fontSize: 14, color: "#374151", marginBottom: 6 }}>
-              Annotator <span className="required">*</span>
-            </p>
-            <div className="annotator-group">
-              {ANNOTATORS.map(a => (
-                <button key={a} onClick={() => handleAnnotatorSelect(a)}
-                  className={`annotator-chip ${annotator === a ? "active" : ""}`}>
-                  Annotator {a}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 제출 여부 */}
-          {annotator && (
-            <div style={{ marginBottom: 10, fontSize: 12, fontWeight: 600,
-              color: submittedIndices.has(currentIndex) ? "#16a34a" : "#9ca3af" }}>
-              {submittedIndices.has(currentIndex) ? "✅ 이미 제출한 샘플입니다" : "⬜ 미제출 샘플입니다"}
-            </div>
-          )}
-
-          {/* Q1 */}
-          <div className="question">
-            <p>Q. LLM이 부여한 라벨이 적절한가? <span className="required">*</span></p>
-            <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6 }}>
-              4~5점: LLM 라벨({sample.predicted}) 그대로 집계 &nbsp;|&nbsp; 1~3점: 아래에서 직접 라벨 선택
-            </div>
-            {renderRadios("q1")}
-          </div>
-
-          {/* Final Label (q1 <= 3일 때만) */}
-          {scores.q1 !== null && scores.q1 <= 3 && (
-            <div className="question">
-              <p>Final Label <span className="required">*</span>
-                <span style={{ fontSize: 11, color: "#d97706", marginLeft: 6 }}>
-                  (Q1 1~3점 → 직접 라벨 선택)
-                </span>
-              </p>
-              <div className="label-group">
-                {["F", "C", "M"].map(l => (
-                  <button key={l} onClick={() => setLabel(l)}
-                    className={`label-btn ${label === l ? "active" : ""}`}>{l}</button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-            <button className="submit-btn" onClick={submit} style={{ flex: 1 }}>Submit</button>
-            <button onClick={excludeSample}
-              style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 8,
-                padding: "8px 14px", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
-              🚫 제외
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default App;
+    const data = await fetchSampleByIndex(res.data
