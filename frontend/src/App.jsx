@@ -592,4 +592,287 @@ function App() {
     setAnnotator(a); localStorage.setItem("annotator", a);
     fetchProgress(a, category); fetchSubmittedIndices(a, category);
     const res = await axios.get(`${BASE_URL}/last_index?annotator=${a}&category=${category}`);
-    const data = await fetchSampleByIndex(res.data
+    const data = await fetchSampleByIndex(res.data.last_index, category);
+    await loadAnnotation(data, a);
+  };
+
+  const nextSample = async () => {
+    if (currentStep >= total) return;
+    const data = await fetchSampleByIndex(currentIndex + 1, category);
+    await loadAnnotation(data, annotator);
+  };
+  const prevSample = async () => {
+    if (currentStep <= 1) return;
+    const data = await fetchSampleByIndex(currentIndex - 1, category);
+    await loadAnnotation(data, annotator);
+  };
+
+  const setScore = (key, value) => setScores({ ...scores, [key]: value });
+
+  const submit = async () => {
+    if (!annotator) { alert("Annotator를 선택하세요"); return; }
+    if (scores.q1 === null) { alert("Q1 점수를 선택해주세요"); return; }
+    if (scores.q1 <= 3 && label === "") { alert("Q1이 1~3점인 경우 Final Label을 선택해야 합니다"); return; }
+    try {
+      await axios.post(`${BASE_URL}/submit`, {
+        sample_id: sample.sample_id, annotator, q1: scores.q1,
+        final_label: scores.q1 <= 3 ? label : null, round: 1,
+      });
+      fetchProgress(annotator, category);
+      fetchSubmittedIndices(annotator, category);
+      fetchClassification();
+      fetchDiscussionCount();
+      if (currentStep < total) {
+        await nextSample();
+      } else {
+        const pRes = await axios.get(`${BASE_URL}/progress?annotator=${annotator}&category=${category}`);
+        const remaining = pRes.data.total - pRes.data.done;
+        if (remaining > 0) {
+          const sRes = await axios.get(`${BASE_URL}/submitted_ids?annotator=${annotator}&category=${category}`);
+          const sSet = new Set(sRes.data.submitted_indices);
+          const first = [...Array(pRes.data.total).keys()].find(i => !sSet.has(i));
+          if (window.confirm(`⚠️ 미제출 샘플이 ${remaining}개 남아있습니다!\n이동할까요?`) && first !== undefined) {
+            const data = await fetchSampleByIndex(first, category);
+            await loadAnnotation(data, annotator);
+          }
+        } else {
+          alert("🎉 모든 문항을 완료했습니다!");
+        }
+      }
+    } catch (err) { console.error(err); alert("제출 실패"); }
+  };
+
+  const excludeSample = async () => {
+    if (!annotator) { alert("Annotator를 선택하세요"); return; }
+    if (!window.confirm("이 샘플을 제외하시겠습니까?\n제외하면 최종 데이터셋에 포함되지 않습니다.")) return;
+    try {
+      await axios.post(`${BASE_URL}/exclude`, { sample_id: sample.sample_id, annotator });
+      fetchProgress(annotator, category);
+      fetchSubmittedIndices(annotator, category);
+      fetchClassification();
+      if (currentStep < total) await nextSample();
+      else alert("제외 처리 완료");
+    } catch { alert("제외 실패"); }
+  };
+
+  const jumpList = jumpCategory === "ALL" ? allSamples : allSamples.filter(s => s.category === jumpCategory);
+  const scoreDescriptions = { 5: "매우 적절함", 4: "적절함", 3: "보통", 2: "부적절함", 1: "매우 부적절함" };
+  const renderRadios = q => [1, 2, 3, 4, 5].map(n => (
+    <label key={n} className="radio">
+      <input type="radio" checked={scores[q] === n} onChange={() => setScore(q, n)} /> {n} : {scoreDescriptions[n]}
+    </label>
+  ));
+
+  if (page === "admin") return <AdminPage onBack={() => setPage("main")} />;
+  if (page === "discussion") return (
+    <DiscussionPage
+      onBack={() => { setPage("main"); fetchClassification(); fetchDiscussionCount(); }}
+      allSamples={allSamples}
+    />
+  );
+  if (!sample) return null;
+
+  const progressPct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+
+  return (
+    <div className="container">
+      {/* HEADER */}
+      <div className="header">
+        <h1>News Sentence Human Evaluation</h1>
+        <div className="header-actions">
+          {annotator && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 12, color: "#6b7280" }}>내 진행도</span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{ width: `${progressPct}%` }} />
+              </div>
+              <span style={{ fontSize: 12, color: "#374151", fontWeight: 600 }}>
+                {progress.done}/{progress.total}
+              </span>
+            </div>
+          )}
+          <span style={{ fontSize: 12, color: "#9ca3af" }}>{currentStep} / {total}</span>
+          <button onClick={() => setPage("admin")} className="nav-btn" style={{ background: "#4f83f3", fontSize: 12 }}>
+            📊 대시보드
+          </button>
+          <button onClick={() => setPage("discussion")} className="nav-btn"
+            style={{
+              background: discussionCount > 0 ? "#f59e0b" : "#e5e7eb",
+              color: discussionCount > 0 ? "#fff" : "#6b7280",
+              fontSize: 12, position: "relative",
+            }}>
+            📋 Disagreement Set
+            {discussionCount > 0 && (
+              <span className="badge-count">{discussionCount > 99 ? "99+" : discussionCount}</span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* 샘플 영역 */}
+      <div className="sample-top-card">
+        <div className="sample-top-meta">
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 13, color: "#6b7280" }}>
+              ID: <strong style={{ color: "#111827" }}>{sample.sample_id}</strong>
+            </span>
+            <span style={{ fontSize: 13, color: "#6b7280" }}>Article: {sample.article_id}</span>
+            <span className="llm-big">LLM: {sample.predicted}</span>
+            {currentStatus && (
+              <span className="status-badge" style={{
+                background: `${STATUS_LABELS[currentStatus.status]?.color}15`,
+                color: STATUS_LABELS[currentStatus.status]?.color,
+              }}>
+                {STATUS_LABELS[currentStatus.status]?.text}
+                {currentStatus.confirmed_label && ` (${currentStatus.confirmed_label})`}
+              </span>
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={prevSample} className="nav-btn" disabled={currentStep === 1}>← Prev</button>
+            <span style={{ fontSize: 12, color: "#9ca3af", minWidth: 60, textAlign: "center" }}>
+              {currentStep}/{total}
+            </span>
+            <button onClick={nextSample} className="nav-btn" disabled={currentStep === total}>Next →</button>
+          </div>
+        </div>
+        <div className="sample-sentences">
+          <div className="sentence-block">
+            <span className="sentence-label">Previous</span>
+            <span className="sentence-text muted">{sample.previous || "이전 문장이 없습니다."}</span>
+          </div>
+          <div className="sentence-block target-block">
+            <span className="sentence-label">Target</span>
+            <span className="sentence-text target-text">{sample.target}</span>
+          </div>
+          <div className="sentence-block">
+            <span className="sentence-label">Next</span>
+            <span className="sentence-text muted">{sample.next || "다음 문장이 없습니다."}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 하단: 가이드라인 + 평가 */}
+      <div className="main">
+        <div style={{ flex: "0 0 320px" }}><GuidelinePanel /></div>
+
+        <div className="card" style={{ flex: 1 }}>
+          <h2 style={{ margin: "0 0 12px 0", fontSize: 16, color: "#111827" }}>Evaluation</h2>
+
+          {/* 카테고리 */}
+          <div className="category-group">
+            {CATEGORIES.map(c => (
+              <button key={c} onClick={() => setCategory(c)} className={category === c ? "selected" : ""}>{c}</button>
+            ))}
+          </div>
+
+          {/* 샘플 Jump */}
+          <div style={{ marginBottom: 12 }}>
+            <button onClick={() => setJumpOpen(!jumpOpen)} className="nav-btn"
+              style={{ width: "100%", marginBottom: 6, background: "#e5e7eb", color: "#374151" }}>
+              📋 샘플 목록 {jumpOpen ? "▲" : "▼"}
+            </button>
+            {jumpOpen && (
+              <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 10, background: "#f9fafb" }}>
+                <div style={{ marginBottom: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                  {CATEGORIES.map(c => (
+                    <button key={c} onClick={() => setJumpCategory(c)}
+                      className={jumpCategory === c ? "selected" : ""}
+                      style={{ fontSize: 11, padding: "2px 6px" }}>{c}</button>
+                  ))}
+                </div>
+                <select style={{ width: "100%", padding: 8, background: "white", color: "#111827",
+                  border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12 }} size={8}
+                  onChange={async (e) => {
+                    const globalIdx = parseInt(e.target.value);
+                    const clicked = allSamples[globalIdx]; if (!clicked) return;
+                    const cat = clicked.category;
+                    const catList = allSamples.filter(s => s.category === cat);
+                    const catIdx = catList.findIndex(s => s.sample_id === clicked.sample_id);
+                    skipCategoryReset.current = true; setCategory(cat);
+                    const data = await fetchSampleByIndex(catIdx, cat);
+                    await loadAnnotation(data, annotator);
+                    fetchProgress(annotator, cat);
+                    if (annotator) fetchSubmittedIndices(annotator, cat);
+                    setJumpOpen(false);
+                  }}>
+                  {jumpList.map(s => {
+                    const globalIdx = allSamples.findIndex(o => o.sample_id === s.sample_id);
+                    const mySubmitted = annotator && submittedSampleIds.has(s.sample_id);
+                    const clf = sampleClassification[s.sample_id];
+                    const mark = clf?.status === "excluded" ? "🚫"
+                      : mySubmitted ? "✅"
+                      : clf?.status === "needs_discussion" ? "⚠️"
+                      : clf?.status === "discussion_resolved" ? "💬"
+                      : "⬜";
+                    return <option key={s.sample_id} value={globalIdx}>{mark} {s.sample_id}</option>;
+                  })}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Annotator */}
+          <div style={{ marginBottom: 14 }}>
+            <p style={{ fontWeight: 600, fontSize: 14, color: "#374151", marginBottom: 6 }}>
+              Annotator <span className="required">*</span>
+            </p>
+            <div className="annotator-group">
+              {ANNOTATORS.map(a => (
+                <button key={a} onClick={() => handleAnnotatorSelect(a)}
+                  className={`annotator-chip ${annotator === a ? "active" : ""}`}>
+                  Annotator {a}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 제출 여부 */}
+          {annotator && (
+            <div style={{ marginBottom: 10, fontSize: 12, fontWeight: 600,
+              color: submittedIndices.has(currentIndex) ? "#16a34a" : "#9ca3af" }}>
+              {submittedIndices.has(currentIndex) ? "✅ 이미 제출한 샘플입니다" : "⬜ 미제출 샘플입니다"}
+            </div>
+          )}
+
+          {/* Q1 */}
+          <div className="question">
+            <p>Q. LLM이 부여한 라벨이 적절한가? <span className="required">*</span></p>
+            <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6 }}>
+              4~5점: LLM 라벨({sample.predicted}) 그대로 집계 &nbsp;|&nbsp; 1~3점: 아래에서 직접 라벨 선택
+            </div>
+            {renderRadios("q1")}
+          </div>
+
+          {/* Final Label (q1 <= 3일 때만) */}
+          {scores.q1 !== null && scores.q1 <= 3 && (
+            <div className="question">
+              <p>Final Label <span className="required">*</span>
+                <span style={{ fontSize: 11, color: "#d97706", marginLeft: 6 }}>
+                  (Q1 1~3점 → 직접 라벨 선택)
+                </span>
+              </p>
+              <div className="label-group">
+                {["F", "C", "M"].map(l => (
+                  <button key={l} onClick={() => setLabel(l)}
+                    className={`label-btn ${label === l ? "active" : ""}`}>{l}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <button className="submit-btn" onClick={submit} style={{ flex: 1 }}>Submit</button>
+            <button onClick={excludeSample}
+              style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 8,
+                padding: "8px 14px", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
+              🚫 제외
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
