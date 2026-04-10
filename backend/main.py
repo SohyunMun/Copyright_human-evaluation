@@ -345,7 +345,7 @@ def submit(data: dict):
         annotator = data["annotator"]
         final_label = data.get("final_label")
 
-        # 프론트에서 is_correct로 전송
+        # 프론트에서 is_correct로 전송 — is_agree 대신 is_correct로 받음
         is_correct = data.get("is_correct")
 
         if is_correct is None:
@@ -670,16 +670,16 @@ def admin_dashboard():
         classification = _classify_samples(all_annotations)
         classification_counts = dict(Counter(info["status"] for info in classification.values()))
 
-        # 어노테이터별 제외 개수
+        # 어노테이터별 제외 개수 — excluded_samples 테이블 기준 (O 제출과 구분)
         excluded_by_annotator = {}
         for a in annotators:
             cnt = cursor.execute("""
-                SELECT COUNT(*) FROM annotations
-                WHERE annotator=? AND q1 IS NULL AND final_label IS NULL AND (round IS NULL OR round = 1)
+                SELECT COUNT(*) FROM excluded_samples
+                WHERE annotator=?
             """, (a,)).fetchone()[0]
             excluded_by_annotator[a] = cnt
 
-        # 제외된 고유 샘플 수
+        # 제외된 고유 샘플 수 (1명이라도 제외한 샘플)
         excluded_sample_count = cursor.execute("""
             SELECT COUNT(DISTINCT sample_id) FROM excluded_samples
         """).fetchone()[0]
