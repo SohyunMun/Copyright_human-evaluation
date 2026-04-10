@@ -4,7 +4,6 @@ import './App.css';
 
 const BASE_URL = 'https://copyrighthuman-evaluation-production-df30.up.railway.app';
 const ANNOTATORS = ['A', 'B', 'C', 'D', 'E'];
-const CATEGORIES = ['ALL', 'Business', 'Entertainment', 'Politics', 'Sport', 'Tech'];
 
 const STATUS_LABELS = {
   confirmed: { text: '✅ 확정 (모두 O)', color: '#16a34a' },
@@ -694,6 +693,7 @@ function AdminPage({ onBack }) {
    ═══════════════════════════════════════════════════════════════ */
 function App() {
   const [annotator, setAnnotator] = useState(() => localStorage.getItem('annotator') || null);
+  const [categories, setCategories] = useState(['ALL']);
   const [isCorrect, setIsCorrect] = useState(null);
   const [label, setLabel] = useState('');
   const [sample, setSample] = useState(null);
@@ -773,7 +773,14 @@ function App() {
 
   const fetchAllSamples = useCallback(async () => {
     const res = await axios.get(`${BASE_URL}/samples`);
-    setAllSamples(res.data);
+    const samples = res.data;
+
+    setAllSamples(samples);
+
+    // 영어 카테고리만 추출
+    const uniqueCategories = ['ALL', ...new Set(samples.map((s) => s.category))];
+
+    setCategories(uniqueCategories);
   }, []);
 
   const fetchClassification = useCallback(async () => {
@@ -1042,9 +1049,9 @@ function App() {
 
           {/* 카테고리 */}
           <div className="category-group">
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <button key={c} onClick={() => setCategory(c)} className={category === c ? 'selected' : ''}>
-                {c}
+                {c === 'en' ? 'English' : c}
               </button>
             ))}
           </div>
@@ -1061,7 +1068,7 @@ function App() {
             {jumpOpen && (
               <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, background: '#f9fafb' }}>
                 <div style={{ marginBottom: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {CATEGORIES.map((c) => (
+                  {categories.map((c) => (
                     <button
                       key={c}
                       onClick={() => setJumpCategory(c)}
