@@ -4,7 +4,7 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-SAMPLE_DIR = os.path.join(BASE_DIR, "sample")
+SAMPLE_DIR = os.path.join(BASE_DIR, "sample", "en")
 
 
 def load_all_samples():
@@ -15,47 +15,54 @@ def load_all_samples():
 
     total_count = 0
 
-    # sample 폴더 안 모든 json 파일 순회
-    for filename in os.listdir(SAMPLE_DIR):
-        if not filename.endswith(".json"):
-            continue
+    # 하위 폴더까지 모두 탐색
+    for root, dirs, files in os.walk(SAMPLE_DIR):
+        for filename in files:
+            if not filename.endswith(".json"):
+                continue
 
-        file_path = os.path.join(SAMPLE_DIR, filename)
+            file_path = os.path.join(root, filename)
 
-        # 파일명으로 category 자동 설정
-        category = filename.replace(".json", "")
+            # 폴더 기반 category 설정
+            # ex) sample/en/xxx.json → category = en
+            category = os.path.basename(root)
 
-        print(f"📂 {category} 로딩 중...")
+            print(f"📂 {category} 로딩 중... ({filename})")
 
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
 
-        articles = data["articles"]
+            # 안전 처리 (구조 다를 경우 대비)
+            if "articles" not in data:
+                print(f"❌ articles 키 없음: {filename}")
+                continue
 
-        count = 0
+            articles = data["articles"]
 
-        for article in articles:
-            article_id = article["article"]   # ex: 경제_1
+            count = 0
 
-            for sample in article["samples"]:
-                cursor.execute("""
-                    INSERT OR IGNORE INTO samples
-                    (sample_id, article_id, category, previous, target, next, predicted)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    sample["sample_id"],
-                    article_id,
-                    category,
-                    sample.get("prev_sentence"),
-                    sample.get("target_sentence"),
-                    sample.get("next_sentence"),
-                    sample.get("label")
-                ))
+            for article in articles:
+                article_id = article.get("article")
 
-                count += 1
-                total_count += 1
+                for sample in article.get("samples", []):
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO samples
+                        (sample_id, article_id, category, previous, target, next, predicted)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        sample.get("sample_id"),
+                        article_id,
+                        category,
+                        sample.get("prev_sentence"),
+                        sample.get("target_sentence"),
+                        sample.get("next_sentence"),
+                        sample.get("label")
+                    ))
 
-        print(f"   → {count}개 저장 완료")
+                    count += 1
+                    total_count += 1
+
+            print(f"   → {count}개 저장 완료")
 
     conn.commit()
     conn.close()
