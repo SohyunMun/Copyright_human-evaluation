@@ -2,6 +2,12 @@ import json
 from database import get_db, init_db
 import os
 
+DB_PATH = "evaluation.db"
+
+if os.path.exists(DB_PATH):
+    os.remove(DB_PATH)
+    print("🗑️ 기존 DB 삭제 완료")
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 SAMPLE_DIR = os.path.join(BASE_DIR, "sample", "en")
