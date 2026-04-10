@@ -29,9 +29,10 @@ def load_all_samples():
 
             file_path = os.path.join(root, filename)
 
-            # 폴더 기반 category 설정
-            # ex) sample/en/xxx.json → category = en
-            category = os.path.basename(root)
+            # category = 파일명에서 추출 (확장자 제거)
+            # ex) sample/en/business.json → category = "business"
+            # 기존 코드: os.path.basename(root) → "en" (폴더명이 잘못 들어가던 문제)
+            category = os.path.splitext(filename)[0]
 
             print(f"📂 {category} 로딩 중... ({filename})")
 

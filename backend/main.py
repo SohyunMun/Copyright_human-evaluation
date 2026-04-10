@@ -81,22 +81,31 @@ def startup():
         load_all_samples()
 
         _migrate_db()
+
+        # category는 DB에 저장된 값 그대로 사용
+        # load_all_samples()가 파일명(business, sport 등)을 category로 저장해야 함
         samples = get_all_samples()
 
         print(f"샘플 개수: {len(samples)}")
+        # 카테고리 확인용 로그
+        cats = set(s["category"] for s in samples)
+        print(f"카테고리 목록: {cats}")
     except Exception as e:
         print(f"startup 오류: {e}")
 
 
 def get_filtered(category):
     if category and category != "ALL":
-        return [s for s in samples if s["category"] == category]
+        return [
+            s for s in samples
+            if s["category"].lower() == category.lower()
+        ]
     return samples
 
 
 def load_annotation_from_db(sample_id: str, annotator: str, round_num: int = 1):
     if not annotator:
-        return {"q1": None, "final_label": None}
+        return {"q1": None, "final_label": None, "is_correct": None}
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
@@ -105,11 +114,18 @@ def load_annotation_from_db(sample_id: str, annotator: str, round_num: int = 1):
             WHERE sample_id=? AND annotator=? AND (round=? OR (round IS NULL AND ?=1))
         """, (sample_id, annotator, round_num, round_num)).fetchone()
         if row:
-            return {"q1": row[0], "final_label": row[1]}
-        return {"q1": None, "final_label": None}
+            q1, final_label = row[0], row[1]
+            # is_correct 필드 추가: final_label이 없으면 O(True), 있으면 X(False)
+            # q1이 None이고 final_label도 None이면 제외 샘플 또는 미제출
+            if q1 is None and final_label is None:
+                is_correct = None  # 미제출 또는 제외
+            else:
+                is_correct = final_label is None  # True=O, False=X
+            return {"q1": q1, "final_label": final_label, "is_correct": is_correct}
+        return {"q1": None, "final_label": None, "is_correct": None}
     except Exception as e:
         print(f"annotation 조회 오류: {e}")
-        return {"q1": None, "final_label": None}
+        return {"q1": None, "final_label": None, "is_correct": None}
     finally:
         conn.close()
 
@@ -178,10 +194,10 @@ def _classify_samples(all_annotations, decisions=None):
 
         for a in anns:
             if a["final_label"] is None:
-                # O
+                # O — LLM 라벨 사용
                 label = predicted
             else:
-                # X
+                # X — 어노테이터 직접 선택
                 label = a["final_label"]
 
             if label in ("F", "C", "M"):
@@ -211,7 +227,6 @@ def _classify_samples(all_annotations, decisions=None):
 def _build_iaa_data(conn):
     """
     IAA 계산용 데이터 구축 (Label 기반만)
-    - Fleiss κ, Krippendorff α (Label)
     """
     predicted_map = {s["sample_id"]: s.get("predicted") for s in samples}
 
@@ -221,18 +236,12 @@ def _build_iaa_data(conn):
         WHERE (round IS NULL OR round = 1)
     """).fetchall()
 
-    predicted_map = {s["sample_id"]: s.get("predicted") for s in samples}
-
     label_dict = defaultdict(list)
 
     for sample_id, annotator, label, q1 in rows:
-
-        # O/X 판단
         if label is None:
-            # O → predicted 사용
             effective_label = predicted_map.get(sample_id)
         else:
-            # X → annotator label
             effective_label = label
 
         if effective_label in ("F", "C", "M"):
@@ -334,21 +343,22 @@ def submit(data: dict):
     try:
         sample_id = data["sample_id"]
         annotator = data["annotator"]
-        is_agree = data.get("is_agree")
-        # q1 = data.get("q1")
         final_label = data.get("final_label")
 
-        if is_agree is None:
-            return {"status": "error", "message": "is_agree is required"}
+        # 프론트에서 is_correct로 전송
+        is_correct = data.get("is_correct")
 
-        # X일 때만 final_label 필요
-        if not is_agree:
+        if is_correct is None:
+            return {"status": "error", "message": "is_correct is required"}
+
+        # X(False)일 때만 final_label 필요
+        if is_correct is False:
             if final_label not in ("F", "C", "M"):
                 return {"status": "error", "message": "final_label must be F/C/M when disagree"}
         else:
-            final_label = None  # O면 LLM 사용
-            
-        q1 = None
+            final_label = None  # O면 LLM 라벨 사용
+
+        q1 = None  # q1 점수 미사용 (현재 인터페이스에서 제거됨)
 
         exists = cursor.execute("""
             SELECT COUNT(*) FROM annotations
@@ -477,7 +487,7 @@ def progress(annotator: str = None, category: str = None):
     try:
         if category and category != "ALL":
             total = cursor.execute(
-                "SELECT COUNT(*) FROM samples WHERE category=?", (category,)
+                "SELECT COUNT(*) FROM samples WHERE LOWER(category)=LOWER(?)", (category,)
             ).fetchone()[0]
         else:
             total = cursor.execute("SELECT COUNT(*) FROM samples").fetchone()[0]
@@ -488,7 +498,7 @@ def progress(annotator: str = None, category: str = None):
                 done = cursor.execute("""
                     SELECT COUNT(DISTINCT a.sample_id)
                     FROM annotations a JOIN samples s ON a.sample_id = s.sample_id
-                    WHERE a.annotator=? AND s.category=? AND (a.round IS NULL OR a.round = 1)
+                    WHERE a.annotator=? AND LOWER(s.category)=LOWER(?) AND (a.round IS NULL OR a.round = 1)
                 """, (annotator, category)).fetchone()[0]
             else:
                 done = cursor.execute("""
@@ -512,7 +522,7 @@ def progress_detail(category: str = "ALL"):
             total = cursor.execute("SELECT COUNT(*) FROM samples").fetchone()[0]
         else:
             total = cursor.execute(
-                "SELECT COUNT(*) FROM samples WHERE category=?", (category,)
+                "SELECT COUNT(*) FROM samples WHERE LOWER(category)=LOWER(?)", (category,)
             ).fetchone()[0]
         annotators = ["A", "B", "C", "D", "E"]
         result = {}
@@ -526,7 +536,7 @@ def progress_detail(category: str = "ALL"):
                 done = cursor.execute("""
                     SELECT COUNT(DISTINCT a.sample_id)
                     FROM annotations a JOIN samples s ON a.sample_id = s.sample_id
-                    WHERE a.annotator=? AND s.category=? AND (a.round IS NULL OR a.round = 1)
+                    WHERE a.annotator=? AND LOWER(s.category)=LOWER(?) AND (a.round IS NULL OR a.round = 1)
                 """, (a, category)).fetchone()[0]
             result[a] = {"done": done, "total": total}
         return result
@@ -578,23 +588,22 @@ def get_discussion_samples():
 
         result = []
         for sid, anns in by_sample.items():
-            q1_scores = [a["q1"] for a in anns if a["q1"] is not None]
-            if not q1_scores:
-                continue
-            if not any(q <= 3 for q in q1_scores):
+            # q1 기반 필터 → X(final_label이 있는) 어노테이션이 있는 샘플만 포함
+            has_disagreement = any(a["final_label"] is not None for a in anns)
+            if not has_disagreement:
                 continue
 
             clf = classification.get(sid, {"status": "in_progress", "confirmed_label": None})
 
             ann_details = []
             for a in sorted(anns, key=lambda x: x["annotator"]):
-                effective_label = a["final_label"]
-                if a["q1"] is not None and a["q1"] >= 4:
-                    effective_label = predicted_map.get(sid)
+                is_correct = a["final_label"] is None
+                effective_label = a["final_label"] if a["final_label"] else predicted_map.get(sid)
                 ann_details.append({
                     "annotator": a["annotator"],
                     "q1": a["q1"],
                     "label": effective_label,
+                    "is_correct": is_correct,
                 })
 
             resolved = clf["status"] == "discussion_resolved"
@@ -639,7 +648,8 @@ def admin_dashboard():
                 "percent": round(done / total * 100, 1) if total else 0,
             }
 
-        categories = cursor.execute("SELECT DISTINCT category FROM samples").fetchall()
+        # 카테고리 목록: DB에서 DISTINCT category 그대로 사용
+        categories = cursor.execute("SELECT DISTINCT category FROM samples ORDER BY category").fetchall()
         category_data = {}
         for (cat,) in categories:
             cat_total = cursor.execute(
@@ -665,14 +675,13 @@ def admin_dashboard():
         for a in annotators:
             cnt = cursor.execute("""
                 SELECT COUNT(*) FROM annotations
-                WHERE annotator=? AND q1 IS NULL AND (round IS NULL OR round = 1)
+                WHERE annotator=? AND q1 IS NULL AND final_label IS NULL AND (round IS NULL OR round = 1)
             """, (a,)).fetchone()[0]
             excluded_by_annotator[a] = cnt
 
-        # 제외된 고유 샘플 수 (1명이라도 제외한 샘플)
+        # 제외된 고유 샘플 수
         excluded_sample_count = cursor.execute("""
-            SELECT COUNT(DISTINCT sample_id) FROM annotations
-            WHERE q1 IS NULL AND (round IS NULL OR round = 1)
+            SELECT COUNT(DISTINCT sample_id) FROM excluded_samples
         """).fetchone()[0]
 
         return {
