@@ -153,102 +153,60 @@ def _classify_samples(all_annotations, decisions=None):
         excluded = _get_excluded_samples(conn)
     finally:
         conn.close()
-    
+
     if decisions is None:
         decisions = {}
 
     predicted_map = {s["sample_id"]: s.get("predicted") for s in samples}
     by_sample = defaultdict(list)
+
     for ann in all_annotations:
         by_sample[ann["sample_id"]].append(ann)
 
     results = {}
-    all_ids = set(by_sample.keys()) | set(decisions.keys())
 
-    for sid in all_ids:
+    for sid, anns in by_sample.items():
+
         if sid in excluded:
             results[sid] = {"status": "excluded", "confirmed_label": None}
             continue
-        
-        anns = by_sample.get(sid, [])
-        q1_scores = [a["q1"] for a in anns if a["q1"] is not None]
-        predicted = predicted_map.get(sid)
 
-        # 수동으로 결정된 샘플 (자동 확정보다 우선)
         if sid in decisions:
-            results[sid] = {"status": "discussion_resolved", "confirmed_label": decisions[sid]}
+            results[sid] = {
+                "status": "discussion_resolved",
+                "confirmed_label": decisions[sid]
+            }
             continue
 
-        if not q1_scores:
+        predicted = predicted_map.get(sid)
+        labels = []
+
+        for a in anns:
+            if a["final_label"] is None:
+                # O
+                label = predicted
+            else:
+                # X
+                label = a["final_label"]
+
+            if label in ("F", "C", "M"):
+                labels.append(label)
+
+        if len(labels) < 3:
             results[sid] = {"status": "in_progress", "confirmed_label": None}
             continue
 
-        # 1명이라도 q1 <= 3 → disagreement 처리
-        low_count = sum(1 for q in q1_scores if q <= 3)
+        counter = Counter(labels)
+        top_label, top_count = counter.most_common(1)[0]
 
-        # 1️⃣ 2명 이상 disagree → 진짜 conflict
-        if low_count >= 2:
-            labels = []
-            for a in anns:
-                if a["q1"] is None:
-                    continue
-                if a["q1"] >= 4 and predicted in ("F", "C", "M"):
-                    labels.append(predicted)
-                elif a["q1"] <= 3 and a["final_label"] in ("F", "C", "M"):
-                    labels.append(a["final_label"])
-
-            if labels:
-                counter = Counter(labels)
-                top_label, top_count = counter.most_common(1)[0]
-
-                if top_count > len(labels) / 2:
-                    results[sid] = {
-                        "status": "discussion_resolved",
-                        "confirmed_label": top_label
-                    }
-                else:
-                    results[sid] = {
-                        "status": "needs_discussion",
-                        "confirmed_label": None
-                    }
-            else:
-                results[sid] = {
-                    "status": "needs_discussion",
-                    "confirmed_label": None
-                }
-            continue
-
-        # 2️⃣ 1명만 disagree → 그냥 LLM 확정
-        elif low_count == 1:
-            if predicted in ("F", "C", "M"):
-                results[sid] = {
-                    "status": "confirmed",
-                    "confirmed_label": predicted
-                }
-            else:
-                results[sid] = {
-                    "status": "in_progress",
-                    "confirmed_label": None
-                }
-            continue
-
-        # 3️⃣ 아직 3명 미만
-        if len(anns) < 3:
-            results[sid] = {
-                "status": "in_progress",
-                "confirmed_label": None
-            }
-            continue
-
-        # 4️⃣ 전부 agree (q1 >= 4)
-        if predicted in ("F", "C", "M"):
+        if top_count > len(labels) / 2:
             results[sid] = {
                 "status": "confirmed",
-                "confirmed_label": predicted
+                "confirmed_label": top_label
             }
         else:
             results[sid] = {
-                "status": "in_progress",
+                "status": "needs_discussion",
                 "confirmed_label": None
             }
 
@@ -257,9 +215,8 @@ def _classify_samples(all_annotations, decisions=None):
 
 def _build_iaa_data(conn):
     """
-    IAA 계산용 데이터 구축
-    - Krippendorff α (Score), ICC: 전체 샘플 Q1 점수 기반
-    - Fleiss κ, Krippendorff α (Label): Q1 <= 3인 샘플에서 어노테이터가 직접 선택한 라벨만 사용
+    IAA 계산용 데이터 구축 (Label 기반만)
+    - Fleiss κ, Krippendorff α (Label)
     """
     cursor = conn.cursor()
     rows = cursor.execute("""
@@ -267,52 +224,39 @@ def _build_iaa_data(conn):
         WHERE (round IS NULL OR round = 1)
     """).fetchall()
 
-    # Q1 점수 기반 (전체)
-    score_dict = defaultdict(list)
-    # 라벨 기반 (Q1 <= 3인 샘플만, 어노테이터가 직접 선택한 라벨)
+    predicted_map = {s["sample_id"]: s.get("predicted") for s in samples}
+
     label_dict = defaultdict(list)
 
     for sample_id, annotator, label, q1 in rows:
-        if q1 is None:
-            continue
-        score_dict[sample_id].append((annotator, label, q1))
 
-        # 라벨 IAA: Q1 <= 3이고 유효한 라벨이 있는 경우만
-        if q1 <= 3 and label in ("F", "C", "M"):
-            label_dict[sample_id].append((annotator, label, q1))
+        # O/X 판단
+        if label is None:
+            # O → predicted 사용
+            effective_label = predicted_map.get(sample_id)
+        else:
+            # X → annotator label
+            effective_label = label
 
-    # 3명 이상 제출한 샘플만
-    score_filtered = {
-        sid: items for sid, items in score_dict.items()
-        if len(set(a for a, _, _ in items)) >= 3
-    }
+        if effective_label in ("F", "C", "M"):
+            label_dict[sample_id].append((annotator, effective_label))
+
     label_filtered = {
         sid: items for sid, items in label_dict.items()
-        if len(set(a for a, _, _ in items)) >= 3
+        if len(set(a for a, _ in items)) >= 3
     }
 
-    return score_filtered, label_filtered
+    return label_filtered
 
 
 def _compute_all_iaa(conn):
-    score_filtered, label_filtered = _build_iaa_data(conn)
+    label_filtered = _build_iaa_data(conn)
 
     result = {
         "fleiss_kappa": 0,
         "alpha_label": 0,
-        "alpha_q1": 0,
-        "icc": 0,
         "label_sample_count": len(label_filtered),
-        "score_sample_count": len(score_filtered),
     }
-
-    # Q1 점수 기반 IAA (전체 샘플)
-    if score_filtered:
-        try:
-            result["alpha_q1"] = compute_krippendorff_alpha_q1(score_filtered)
-            result["icc"] = compute_icc(score_filtered, min_raters=3)
-        except Exception as e:
-            print(f"score IAA 오류: {e}")
 
     # 라벨 기반 IAA (Q1 <= 3 샘플만)
     if label_filtered:
@@ -320,7 +264,7 @@ def _compute_all_iaa(conn):
             fleiss_input = [
                 {"sample_id": sid, "label": label}
                 for sid, items in label_filtered.items()
-                for _, label, _ in items
+                for _, label in items
             ]
             result["fleiss_kappa"] = compute_fleiss_kappa(fleiss_input)
             result["alpha_label"] = compute_krippendorff_alpha_label(label_filtered)
@@ -394,16 +338,21 @@ def submit(data: dict):
     try:
         sample_id = data["sample_id"]
         annotator = data["annotator"]
-        q1 = data.get("q1")
+        is_agree = data.get("is_agree")
+        # q1 = data.get("q1")
         final_label = data.get("final_label")
 
-        if q1 is None:
-            return {"status": "error", "message": "q1 is required"}
-        if q1 <= 3:
+        if is_agree is None:
+            return {"status": "error", "message": "is_agree is required"}
+
+        # X일 때만 final_label 필요
+        if not is_agree:
             if final_label not in ("F", "C", "M"):
-                return {"status": "error", "message": "final_label must be F/C/M when q1 <= 3"}
-        if q1 >= 4:
-            final_label = None  # q1 >= 4면 LLM 라벨 사용
+                return {"status": "error", "message": "final_label must be F/C/M when disagree"}
+        else:
+            final_label = None  # O면 LLM 사용
+            
+        q1 = None
 
         exists = cursor.execute("""
             SELECT COUNT(*) FROM annotations
@@ -580,7 +529,12 @@ def get_iaa():
     try:
         return _compute_all_iaa(conn)
     except Exception as e:
-        return {"fleiss_kappa": 0, "alpha_q1": 0, "icc": 0, "alpha_label": 0}
+        print(f"IAA API 오류: {e}")
+        return {
+            "fleiss_kappa": 0,
+            "alpha_label": 0,
+            "label_sample_count": 0,
+        }
     finally:
         conn.close()
 
