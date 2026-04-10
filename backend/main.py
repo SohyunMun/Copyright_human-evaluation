@@ -6,6 +6,7 @@ from database import init_db, get_db
 import os, json, csv, io
 from collections import defaultdict, Counter
 from datetime import datetime
+from load_samples import load_all_samples
 
 app = FastAPI()
 
@@ -75,8 +76,13 @@ def startup():
     global samples
     try:
         init_db()
+
+        # 서버 시작 시 DB 재구성 + en 데이터 로딩
+        load_all_samples()
+
         _migrate_db()
         samples = get_all_samples()
+
         print(f"샘플 개수: {len(samples)}")
     except Exception as e:
         print(f"startup 오류: {e}")
