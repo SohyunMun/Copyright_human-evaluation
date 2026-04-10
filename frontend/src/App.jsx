@@ -7,11 +7,13 @@ const ANNOTATORS = ['A', 'B', 'C', 'D', 'E'];
 
 const FIXED_CATEGORIES = ['ALL', 'business', 'entertainment', 'politics', 'sport', 'tech'];
 
+// [FIX 2] excluded 상태 추가
 const STATUS_LABELS = {
   confirmed: { text: '✅ 확정 (모두 O)', color: '#16a34a' },
   discussion_resolved: { text: '✅ Disagreement Resolved', color: '#2563eb' },
   needs_discussion: { text: '⚠️ Disagreement', color: '#d97706' },
   in_progress: { text: '⬜ 진행 중', color: '#9ca3af' },
+  excluded: { text: '🚫 제외', color: '#6b7280' },
 };
 
 function GuidelinePanel() {
@@ -418,7 +420,6 @@ function AdminPage({ onBack }) {
       </div>
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
         <div className="card">
-          {/* 전체 진행률 */}
           <h2 className="dash-section-title">전체 진행률 (총 {adminData.total_samples}개)</h2>
           {ANNOTATORS.map((a) => {
             const p = adminData.progress[a] || { done: 0, total: 1, percent: 0 };
@@ -452,13 +453,11 @@ function AdminPage({ onBack }) {
             </div>
           )}
 
-          {/* IAA */}
           <h2 className="dash-section-title" style={{ marginTop: 28 }}>
             IAA (어노테이터 간 일치도)
           </h2>
           <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 10, lineHeight: 1.6 }}>
             • <strong>라벨 일치도</strong>: O → LLM 라벨, X → 직접 선택 라벨 기준 (제외 샘플 제외)
-            <br />
           </div>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
             {[
@@ -473,7 +472,6 @@ function AdminPage({ onBack }) {
             ))}
           </div>
 
-          {/* 샘플 분류 현황 */}
           <h2 className="dash-section-title" style={{ marginTop: 28 }}>
             샘플 분류 현황
           </h2>
@@ -520,7 +518,6 @@ function AdminPage({ onBack }) {
             </p>
           )}
 
-          {/* [FIX 2] 카테고리별 진행률 — DB에서 오는 카테고리 이름 그대로 표시 */}
           <h2 className="dash-section-title" style={{ marginTop: 28 }}>
             카테고리별 진행률
           </h2>
@@ -538,7 +535,6 @@ function AdminPage({ onBack }) {
             </div>
           ))}
 
-          {/* DB 조회 */}
           <h2 className="dash-section-title" style={{ marginTop: 28 }}>
             DB 조회
           </h2>
@@ -630,7 +626,6 @@ function AdminPage({ onBack }) {
             )}
           </div>
 
-          {/* 데이터 내보내기 */}
           <h2 className="dash-section-title" style={{ marginTop: 28 }}>
             데이터 내보내기
           </h2>
@@ -688,7 +683,6 @@ function AdminPage({ onBack }) {
    ═══════════════════════════════════════════════════════════════ */
 function App() {
   const [annotator, setAnnotator] = useState(() => localStorage.getItem('annotator') || null);
-  // [FIX 1] 카테고리는 FIXED_CATEGORIES 사용, 동적 로딩 제거
   const [isCorrect, setIsCorrect] = useState(null);
   const [label, setLabel] = useState('');
   const [sample, setSample] = useState(null);
@@ -707,11 +701,16 @@ function App() {
   const [discussionCount, setDiscussionCount] = useState(0);
 
   const currentStatus = sample ? sampleClassification[sample.sample_id] || null : null;
+
   const resetState = () => {
     setIsCorrect(null);
     setLabel('');
   };
 
+  // [FIX 1] loadAnnotation: 백엔드 /annotation의 is_correct 필드로 O/X 버튼 상태 복원
+  // - is_correct=true  → O 버튼 활성화
+  // - is_correct=false → X 버튼 활성화 + final_label 복원
+  // - is_correct=null  → 미제출/제외이므로 초기화
   const loadAnnotation = useCallback(
     async (sampleData, ann) => {
       const a = ann ?? annotator;
@@ -723,16 +722,19 @@ function App() {
         const res = await axios.get(`${BASE_URL}/annotation`, {
           params: { sample_id: sampleData.sample_id, annotator: a, round_num: 1 },
         });
-        // [FIX 3] is_correct 필드로 통일 — 백엔드 /annotation이 is_correct를 반환하도록 맞춤
-        // final_label이 null이면 O(is_correct=true), 있으면 X(is_correct=false)
-        // 단, q1=null이면 제외 샘플이므로 null 유지
-        if (res.data.q1 === null && res.data.final_label === null) {
-          // 미제출 또는 제외 샘플 — 판단 불가, 초기화
+        const { is_correct, final_label } = res.data;
+
+        if (is_correct === null || is_correct === undefined) {
+          // 미제출 또는 제외 샘플 → 초기화
           resetState();
+        } else if (is_correct === true) {
+          // O 제출 → O 버튼 복원
+          setIsCorrect(true);
+          setLabel('');
         } else {
-          const isCorrectVal = res.data.final_label === null ? true : false;
-          setIsCorrect(isCorrectVal === true ? true : res.data.final_label ? false : null);
-          setLabel(res.data.final_label || '');
+          // X 제출 → X 버튼 + 선택한 라벨 복원
+          setIsCorrect(false);
+          setLabel(final_label || '');
         }
       } catch {
         resetState();
@@ -826,7 +828,6 @@ function App() {
     await loadAnnotation(data, annotator);
   };
 
-  // [FIX 3] submit: is_correct → is_correct로 백엔드에 전송 (백엔드도 is_correct로 통일)
   const submit = async () => {
     if (!annotator) {
       alert('Annotator를 선택하세요');
@@ -844,7 +845,7 @@ function App() {
       await axios.post(`${BASE_URL}/submit`, {
         sample_id: sample.sample_id,
         annotator,
-        is_correct: isCorrect, // ← 백엔드와 키 이름 통일
+        is_correct: isCorrect,
         final_label: isCorrect === false ? label : null,
         round: 1,
       });
@@ -898,7 +899,6 @@ function App() {
     }
   };
 
-  // [FIX 1] 카테고리 필터링: allSamples의 category 기준으로 필터
   const jumpList = jumpCategory === 'ALL' ? allSamples : allSamples.filter((s) => s.category === jumpCategory);
 
   if (page === 'admin') return <AdminPage onBack={() => setPage('main')} />;
@@ -919,7 +919,6 @@ function App() {
 
   return (
     <div className="container">
-      {/* HEADER */}
       <div className="header">
         <h1>News Sentence Human Evaluation</h1>
         <div className="header-actions">
@@ -958,7 +957,6 @@ function App() {
         </div>
       </div>
 
-      {/* 샘플 영역 */}
       <div className="sample-top-card">
         <div className="sample-top-meta">
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
@@ -967,15 +965,16 @@ function App() {
             </span>
             <span style={{ fontSize: 13, color: '#6b7280' }}>Article: {sample.article_id}</span>
             <span className="llm-big">LLM: {sample.predicted}</span>
-            {currentStatus && (
+            {/* [FIX 2] excluded 포함 모든 상태 뱃지 — STATUS_LABELS에 excluded 추가됨 */}
+            {currentStatus && STATUS_LABELS[currentStatus.status] && (
               <span
                 className="status-badge"
                 style={{
-                  background: `${STATUS_LABELS[currentStatus.status]?.color}15`,
-                  color: STATUS_LABELS[currentStatus.status]?.color,
+                  background: `${STATUS_LABELS[currentStatus.status].color}15`,
+                  color: STATUS_LABELS[currentStatus.status].color,
                 }}
               >
-                {STATUS_LABELS[currentStatus.status]?.text}
+                {STATUS_LABELS[currentStatus.status].text}
                 {currentStatus.confirmed_label && ` (${currentStatus.confirmed_label})`}
               </span>
             )}
@@ -1008,7 +1007,6 @@ function App() {
         </div>
       </div>
 
-      {/* 하단: 가이드라인 + 평가 */}
       <div className="main">
         <div style={{ flex: '0 0 320px' }}>
           <GuidelinePanel />
@@ -1017,7 +1015,6 @@ function App() {
         <div className="card" style={{ flex: 1 }}>
           <h2 style={{ margin: '0 0 12px 0', fontSize: 16, color: '#111827' }}>Evaluation</h2>
 
-          {/* [FIX 1] 카테고리 버튼: FIXED_CATEGORIES 고정 목록 사용 */}
           <div className="category-group">
             {FIXED_CATEGORIES.map((c) => (
               <button key={c} onClick={() => setCategory(c)} className={category === c ? 'selected' : ''}>
@@ -1026,7 +1023,6 @@ function App() {
             ))}
           </div>
 
-          {/* 샘플 Jump */}
           <div style={{ marginBottom: 12 }}>
             <button
               onClick={() => setJumpOpen(!jumpOpen)}
@@ -1037,7 +1033,6 @@ function App() {
             </button>
             {jumpOpen && (
               <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, background: '#f9fafb' }}>
-                {/* [FIX 1] Jump 카테고리 탭도 FIXED_CATEGORIES 사용 */}
                 <div style={{ marginBottom: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                   {FIXED_CATEGORIES.map((c) => (
                     <button
@@ -1101,7 +1096,6 @@ function App() {
             )}
           </div>
 
-          {/* Annotator */}
           <div style={{ marginBottom: 14 }}>
             <p style={{ fontWeight: 600, fontSize: 14, color: '#374151', marginBottom: 6 }}>
               Annotator <span className="required">*</span>
@@ -1119,7 +1113,6 @@ function App() {
             </div>
           </div>
 
-          {/* Q1 */}
           <div className="question">
             <p>
               Q. Is the LLM label correct? <span className="required">*</span>
@@ -1137,7 +1130,6 @@ function App() {
             </div>
           </div>
 
-          {/* Final Label (X 선택 시만) */}
           {isCorrect === false && (
             <div className="question">
               <p>
