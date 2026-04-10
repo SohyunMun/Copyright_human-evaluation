@@ -5,6 +5,8 @@ import './App.css';
 const BASE_URL = 'https://copyrighthuman-evaluation-production-df30.up.railway.app';
 const ANNOTATORS = ['A', 'B', 'C', 'D', 'E'];
 
+const FIXED_CATEGORIES = ['ALL', 'business', 'entertainment', 'politics', 'sport', 'tech'];
+
 const STATUS_LABELS = {
   confirmed: { text: '✅ 확정 (모두 O)', color: '#16a34a' },
   discussion_resolved: { text: '✅ Disagreement Resolved', color: '#2563eb' },
@@ -60,14 +62,13 @@ function GuidelinePanel() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Disagreement Set 페이지 — 열람 전용
+   Disagreement Set 페이지
    ═══════════════════════════════════════════════════════════════ */
 function DiscussionPage({ onBack, allSamples }) {
   const [discussionData, setDiscussionData] = useState({ samples: [], total: 0, resolved_count: 0 });
   const [selected, setSelected] = useState(null);
   const [sampleDetail, setSampleDetail] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const [decidedLabel, setDecidedLabel] = useState('');
 
   const fetchDiscussion = useCallback(async () => {
@@ -85,8 +86,6 @@ function DiscussionPage({ onBack, allSamples }) {
 
   const selectSample = async (item) => {
     setSelected(item);
-
-    // 선택 시 decidedLabel도 동기화
     setDecidedLabel(item.decided_label || '');
     const found = allSamples.find((s) => s.sample_id === item.sample_id);
     if (found) {
@@ -109,8 +108,6 @@ function DiscussionPage({ onBack, allSamples }) {
         final_label: decidedLabel,
       });
       alert(`✅ ${selected.sample_id} → ${decidedLabel} 확정`);
-      // await fetchDiscussion();
-      // 업데이트된 데이터로 selected 갱신
       const res = await axios.get(`${BASE_URL}/discussion_samples`);
       setDiscussionData(res.data);
       const updated = res.data.samples.find((s) => s.sample_id === selected.sample_id);
@@ -460,15 +457,13 @@ function AdminPage({ onBack }) {
             IAA (어노테이터 간 일치도)
           </h2>
           <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 10, lineHeight: 1.6 }}>
-            • <strong>라벨 일치도</strong>: Q1 4~5점 → LLM 라벨, Q1 1~3점 → 직접 선택 라벨 기준 (제외 샘플 제외)
-            <br />• <strong>점수 일치도</strong>: 전체 Q1 점수 기준 (제외 샘플 제외)
+            • <strong>라벨 일치도</strong>: O → LLM 라벨, X → 직접 선택 라벨 기준 (제외 샘플 제외)
+            <br />
           </div>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
             {[
               ['Fleiss κ (Label)', adminData.iaa.fleiss_kappa, '라벨(F/C/M) 범주 일치도'],
               ['Krippendorff α (Label)', adminData.iaa.alpha_label, '라벨(F/C/M) 일치도'],
-              // ['Krippendorff α (Score)', adminData.iaa.alpha_q1, 'Q1 점수(1-5) 서열 일치도'],
-              // ['ICC(2,1) (Score)', adminData.iaa.icc, 'Q1 점수 절대 일치도'],
             ].map(([lbl, val, desc]) => (
               <div key={lbl} className="dashboard-card">
                 <div className="dashboard-metric-label">{lbl}</div>
@@ -525,7 +520,7 @@ function AdminPage({ onBack }) {
             </p>
           )}
 
-          {/* 카테고리별 진행률 */}
+          {/* [FIX 2] 카테고리별 진행률 — DB에서 오는 카테고리 이름 그대로 표시 */}
           <h2 className="dash-section-title" style={{ marginTop: 28 }}>
             카테고리별 진행률
           </h2>
@@ -693,7 +688,7 @@ function AdminPage({ onBack }) {
    ═══════════════════════════════════════════════════════════════ */
 function App() {
   const [annotator, setAnnotator] = useState(() => localStorage.getItem('annotator') || null);
-  const [categories, setCategories] = useState(['ALL']);
+  // [FIX 1] 카테고리는 FIXED_CATEGORIES 사용, 동적 로딩 제거
   const [isCorrect, setIsCorrect] = useState(null);
   const [label, setLabel] = useState('');
   const [sample, setSample] = useState(null);
@@ -701,7 +696,6 @@ function App() {
   const [currentStep, setCurrentStep] = useState(1);
   const [total, setTotal] = useState(1);
   const [category, setCategory] = useState('ALL');
-  const [submittedIndices, setSubmittedIndices] = useState(new Set());
   const [submittedSampleIds, setSubmittedSampleIds] = useState(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [allSamples, setAllSamples] = useState([]);
@@ -729,27 +723,23 @@ function App() {
         const res = await axios.get(`${BASE_URL}/annotation`, {
           params: { sample_id: sampleData.sample_id, annotator: a, round_num: 1 },
         });
-        setIsCorrect(res.data.is_correct);
-        setLabel(res.data.is_correct === false ? res.data.final_label || '' : '');
+        // [FIX 3] is_correct 필드로 통일 — 백엔드 /annotation이 is_correct를 반환하도록 맞춤
+        // final_label이 null이면 O(is_correct=true), 있으면 X(is_correct=false)
+        // 단, q1=null이면 제외 샘플이므로 null 유지
+        if (res.data.q1 === null && res.data.final_label === null) {
+          // 미제출 또는 제외 샘플 — 판단 불가, 초기화
+          resetState();
+        } else {
+          const isCorrectVal = res.data.final_label === null ? true : false;
+          setIsCorrect(isCorrectVal === true ? true : res.data.final_label ? false : null);
+          setLabel(res.data.final_label || '');
+        }
       } catch {
         resetState();
       }
     },
     [annotator],
   );
-
-  // const fetchSubmittedIndices = useCallback(async (ann, cat) => {
-  //   if (!ann) return;
-  //   try {
-  //     const [idxRes, allRes] = await Promise.all([
-  //       axios.get(`${BASE_URL}/submitted_ids?annotator=${ann}&category=${cat}`),
-  //       axios.get(`${BASE_URL}/annotations?annotator=${ann}`),
-  //     ]);
-  //     setSubmittedIndices(new Set(idxRes.data.submitted_indices));
-  //     const ids = (allRes.data || []).filter((a) => a.round === 1 || a.round == null).map((a) => a.sample_id);
-  //     setSubmittedSampleIds(new Set(ids));
-  //   } catch {}
-  // }, []);
 
   const fetchSampleByIndex = async (index, cat) => {
     const res = await axios.get(`${BASE_URL}/sample`, { params: { index, category: cat } });
@@ -773,14 +763,7 @@ function App() {
 
   const fetchAllSamples = useCallback(async () => {
     const res = await axios.get(`${BASE_URL}/samples`);
-    const samples = res.data;
-
-    setAllSamples(samples);
-
-    // 영어 카테고리만 추출
-    const uniqueCategories = ['ALL', ...new Set(samples.map((s) => s.category))];
-
-    setCategories(uniqueCategories);
+    setAllSamples(res.data);
   }, []);
 
   const fetchClassification = useCallback(async () => {
@@ -806,7 +789,6 @@ function App() {
 
     if (saved) {
       fetchProgress(saved, 'ALL');
-      // fetchSubmittedIndices(saved, 'ALL');
       axios.get(`${BASE_URL}/last_index?annotator=${saved}&category=ALL`).then((res) => {
         fetchSampleByIndex(res.data.last_index, 'ALL').then((data) => loadAnnotation(data, saved));
       });
@@ -827,9 +809,7 @@ function App() {
   const handleAnnotatorSelect = async (a) => {
     setAnnotator(a);
     localStorage.setItem('annotator', a);
-
     fetchProgress(a, category);
-    // fetchSubmittedIndices(a, category);
     const res = await axios.get(`${BASE_URL}/last_index?annotator=${a}&category=${category}`);
     const data = await fetchSampleByIndex(res.data.last_index, category);
     await loadAnnotation(data, a);
@@ -846,8 +826,7 @@ function App() {
     await loadAnnotation(data, annotator);
   };
 
-  // const setScore = (key, value) => setScores({ ...scores, [key]: value });
-
+  // [FIX 3] submit: is_correct → is_correct로 백엔드에 전송 (백엔드도 is_correct로 통일)
   const submit = async () => {
     if (!annotator) {
       alert('Annotator를 선택하세요');
@@ -857,7 +836,6 @@ function App() {
       alert('O/X를 선택해주세요');
       return;
     }
-
     if (isCorrect === false && label === '') {
       alert('X 선택 시 Final Label을 지정해야 합니다');
       return;
@@ -866,23 +844,22 @@ function App() {
       await axios.post(`${BASE_URL}/submit`, {
         sample_id: sample.sample_id,
         annotator,
-        is_correct: isCorrect,
+        is_correct: isCorrect, // ← 백엔드와 키 이름 통일
         final_label: isCorrect === false ? label : null,
         round: 1,
       });
       fetchProgress(annotator, category);
-      // fetchSubmittedIndices(annotator, category);
       fetchClassification();
       fetchDiscussionCount();
 
+      setSubmittedSampleIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.add(sample.sample_id);
+        return newSet;
+      });
+
       if (currentStep < total) {
         await nextSample();
-
-        setSubmittedSampleIds((prev) => {
-          const newSet = new Set(prev);
-          newSet.add(sample.sample_id);
-          return newSet;
-        });
       } else {
         const pRes = await axios.get(`${BASE_URL}/progress?annotator=${annotator}&category=${category}`);
         const remaining = pRes.data.total - pRes.data.done;
@@ -913,7 +890,6 @@ function App() {
     try {
       await axios.post(`${BASE_URL}/exclude`, { sample_id: sample.sample_id, annotator });
       fetchProgress(annotator, category);
-      // fetchSubmittedIndices(annotator, category);
       fetchClassification();
       if (currentStep < total) await nextSample();
       else alert('제외 처리 완료');
@@ -922,14 +898,8 @@ function App() {
     }
   };
 
+  // [FIX 1] 카테고리 필터링: allSamples의 category 기준으로 필터
   const jumpList = jumpCategory === 'ALL' ? allSamples : allSamples.filter((s) => s.category === jumpCategory);
-  // const scoreDescriptions = { 5: '매우 적절함', 4: '적절함', 3: '보통', 2: '부적절함', 1: '매우 부적절함' };
-  // const renderRadios = (q) =>
-  //   [1, 2, 3, 4, 5].map((n) => (
-  //     <label key={n} className="radio">
-  //       <input type="radio" checked={scores[q] === n} onChange={() => setScore(q, n)} /> {n} : {scoreDescriptions[n]}
-  //     </label>
-  //   ));
 
   if (page === 'admin') return <AdminPage onBack={() => setPage('main')} />;
   if (page === 'discussion')
@@ -1047,11 +1017,11 @@ function App() {
         <div className="card" style={{ flex: 1 }}>
           <h2 style={{ margin: '0 0 12px 0', fontSize: 16, color: '#111827' }}>Evaluation</h2>
 
-          {/* 카테고리 */}
+          {/* [FIX 1] 카테고리 버튼: FIXED_CATEGORIES 고정 목록 사용 */}
           <div className="category-group">
-            {categories.map((c) => (
+            {FIXED_CATEGORIES.map((c) => (
               <button key={c} onClick={() => setCategory(c)} className={category === c ? 'selected' : ''}>
-                {c === 'en' ? 'English' : c}
+                {c}
               </button>
             ))}
           </div>
@@ -1067,8 +1037,9 @@ function App() {
             </button>
             {jumpOpen && (
               <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, background: '#f9fafb' }}>
+                {/* [FIX 1] Jump 카테고리 탭도 FIXED_CATEGORIES 사용 */}
                 <div style={{ marginBottom: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {categories.map((c) => (
+                  {FIXED_CATEGORIES.map((c) => (
                     <button
                       key={c}
                       onClick={() => setJumpCategory(c)}
@@ -1102,7 +1073,6 @@ function App() {
                     const data = await fetchSampleByIndex(catIdx, cat);
                     await loadAnnotation(data, annotator);
                     fetchProgress(annotator, cat);
-                    // if (annotator) fetchSubmittedIndices(annotator, cat);
                     setJumpOpen(false);
                   }}
                 >
@@ -1149,25 +1119,15 @@ function App() {
             </div>
           </div>
 
-          {/* 제출 여부
-          {annotator && (
-            <div style={{ marginBottom: 10, fontSize: 12, fontWeight: 600,
-              color: submittedIndices.has(currentIndex) ? "#16a34a" : "#9ca3af" }}>
-              {submittedIndices.has(currentIndex) ? "✅ 이미 제출한 샘플입니다" : "⬜ 미제출 샘플입니다"}
-            </div>
-          )} */}
-
           {/* Q1 */}
           <div className="question">
             <p>
               Q. Is the LLM label correct? <span className="required">*</span>
             </p>
-
             <div className="label-group">
               <button onClick={() => setIsCorrect(true)} className={`label-btn ${isCorrect === true ? 'active' : ''}`}>
                 O
               </button>
-
               <button
                 onClick={() => setIsCorrect(false)}
                 className={`label-btn ${isCorrect === false ? 'active' : ''}`}
@@ -1177,7 +1137,7 @@ function App() {
             </div>
           </div>
 
-          {/* Final Label (q1 <= 3일 때만) */}
+          {/* Final Label (X 선택 시만) */}
           {isCorrect === false && (
             <div className="question">
               <p>
