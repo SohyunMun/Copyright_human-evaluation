@@ -61,13 +61,12 @@ function GuidelinePanel() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Disagreement Set 페이지
+   Disagreement Set 페이지 — 열람 전용
    ═══════════════════════════════════════════════════════════════ */
 function DiscussionPage({ onBack, allSamples }) {
   const [discussionData, setDiscussionData] = useState({ samples: [], total: 0, resolved_count: 0 });
   const [selected, setSelected] = useState(null);
   const [sampleDetail, setSampleDetail] = useState(null);
-  const [decidedLabel, setDecidedLabel] = useState('');
   const [loading, setLoading] = useState(true);
 
   const fetchDiscussion = useCallback(async () => {
@@ -85,7 +84,6 @@ function DiscussionPage({ onBack, allSamples }) {
 
   const selectSample = async (item) => {
     setSelected(item);
-    setDecidedLabel(item.decided_label || '');
     const found = allSamples.find((s) => s.sample_id === item.sample_id);
     if (found) {
       const catList = allSamples.filter((s) => s.category === found.category);
@@ -140,10 +138,10 @@ function DiscussionPage({ onBack, allSamples }) {
   return (
     <div className="container">
       <div className="header">
-        <h1>💬 Disagreement Set </h1>
+        <h1>📋 Disagreement Set</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 12, color: '#6b7280' }}>
-            완료 {discussionData.resolved_count} / 전체 {discussionData.total}
+            Resolved {discussionData.resolved_count} / 전체 {discussionData.total}
           </span>
           <button onClick={fetchDiscussion} className="nav-btn" style={{ padding: '4px 10px', fontSize: 11 }}>
             ↻ 새로고침
@@ -170,12 +168,11 @@ function DiscussionPage({ onBack, allSamples }) {
       </div>
 
       <div className="main">
-        {/* LEFT: 목록 */}
         <div className="card relabel-list">
           {loading ? (
             <p style={{ color: '#9ca3af' }}>로딩 중...</p>
           ) : discussionData.total === 0 ? (
-            <p style={{ color: '#16a34a' }}>🎉 모두 완료</p>
+            <p style={{ color: '#16a34a' }}>🎉 Disagreement 샘플이 없습니다!</p>
           ) : (
             <div style={{ overflowY: 'auto' }}>
               {pendingItems.length > 0 && (
@@ -190,7 +187,7 @@ function DiscussionPage({ onBack, allSamples }) {
                       marginBottom: 4,
                     }}
                   >
-                    ⚠️ Disagreement Sample ({pendingItems.length}개)
+                    ⚠️ Disagreement ({pendingItems.length}개)
                   </div>
                   {pendingItems.map((item) => (
                     <div
@@ -231,6 +228,11 @@ function DiscussionPage({ onBack, allSamples }) {
                         <div style={{ fontWeight: 600, fontSize: 12, color: '#111827' }}>{item.sample_id}</div>
                         <span style={{ fontSize: 11, fontWeight: 700, color: '#2563eb' }}>→ {item.decided_label}</span>
                       </div>
+                      <div style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>
+                        {item.annotations
+                          .map((a) => `${a.annotator}:${a.q1}점${a.label ? `(${a.label})` : ''}`)
+                          .join(' ')}
+                      </div>
                     </div>
                   ))}
                 </>
@@ -239,11 +241,10 @@ function DiscussionPage({ onBack, allSamples }) {
           )}
         </div>
 
-        {/* RIGHT: 상세 */}
         <div className="card" style={{ flex: 1 }}>
           {!selected ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>💬</div>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
               <p>좌측에서 샘플을 선택하세요.</p>
             </div>
           ) : (
@@ -256,7 +257,6 @@ function DiscussionPage({ onBack, allSamples }) {
                 </div>
               </div>
 
-              {/* 어노테이터별 응답 */}
               <div
                 style={{
                   background: '#f9fafb',
@@ -311,9 +311,36 @@ function DiscussionPage({ onBack, allSamples }) {
                     ))}
                   </tbody>
                 </table>
+                {selected.resolved ? (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      padding: '8px 12px',
+                      background: '#eff6ff',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      color: '#1e40af',
+                      fontWeight: 600,
+                    }}
+                  >
+                    ✅ 다수결 자동 확정 라벨: <span style={{ fontSize: 14 }}>{selected.decided_label}</span>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      padding: '8px 12px',
+                      background: '#fef9c3',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      color: '#854d0e',
+                    }}
+                  >
+                    ⚠️ 아직 과반수 합의 미달 — 더 많은 어노테이터의 응답이 필요합니다
+                  </div>
+                )}
               </div>
 
-              {/* 샘플 텍스트 */}
               {sampleDetail && (
                 <div style={{ marginBottom: 16 }}>
                   <p className="label">Previous Sentence</p>
@@ -324,49 +351,6 @@ function DiscussionPage({ onBack, allSamples }) {
                   <p style={{ fontSize: 13, color: '#6b7280' }}>{sampleDetail.next || '—'}</p>
                 </div>
               )}
-
-              {/* 최종 라벨 결정 */}
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: 14 }}>
-                <div style={{ fontWeight: 700, color: '#1e40af', marginBottom: 10, fontSize: 13 }}>
-                  ✅ 최종 라벨 결정 (Disagreement Resolved)
-                </div>
-                <div className="label-group" style={{ marginBottom: 10 }}>
-                  {['F', 'C', 'M'].map((l) => (
-                    <button
-                      key={l}
-                      onClick={() => setDecidedLabel(l)}
-                      className={`label-btn ${decidedLabel === l ? 'active' : ''}`}
-                      style={{ flex: 1 }}
-                    >
-                      {l}
-                    </button>
-                  ))}
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    className="submit-btn"
-                    onClick={submitDecision}
-                    disabled={!decidedLabel}
-                    style={{ flex: 1, marginTop: 0 }}
-                  >
-                    ✅ 최종 라벨 확정
-                  </button>
-                  {selected.resolved && (
-                    <button
-                      onClick={cancelDecision}
-                      className="nav-btn"
-                      style={{ background: '#fee2e2', color: '#dc2626', marginTop: 0 }}
-                    >
-                      취소
-                    </button>
-                  )}
-                </div>
-                {selected.resolved && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: '#2563eb', fontWeight: 600 }}>
-                    현재 결정: {selected.decided_label}
-                  </div>
-                )}
-              </div>
             </>
           )}
         </div>
@@ -446,14 +430,35 @@ function AdminPage({ onBack }) {
                 <span style={{ fontSize: 12, color: '#6b7280', minWidth: 130 }}>
                   {p.done} / {p.total} ({p.percent}%)
                 </span>
+                {(adminData.excluded_by_annotator?.[a] || 0) > 0 && (
+                  <span style={{ fontSize: 11, color: '#6b7280' }}>🚫 {adminData.excluded_by_annotator[a]}개 제외</span>
+                )}
               </div>
             );
           })}
+          {(adminData.excluded_sample_count || 0) > 0 && (
+            <div
+              style={{
+                marginTop: 6,
+                fontSize: 12,
+                color: '#6b7280',
+                padding: '6px 10px',
+                background: '#f9fafb',
+                borderRadius: 6,
+              }}
+            >
+              🚫 제외된 샘플 (1명 이상 제외): <strong>{adminData.excluded_sample_count}개</strong>
+            </div>
+          )}
 
           {/* IAA */}
           <h2 className="dash-section-title" style={{ marginTop: 28 }}>
             IAA (어노테이터 간 일치도)
           </h2>
+          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 10, lineHeight: 1.6 }}>
+            • <strong>라벨 일치도</strong>: Q1 4~5점 → LLM 라벨, Q1 1~3점 → 직접 선택 라벨 기준 (제외 샘플 제외)
+            <br />• <strong>점수 일치도</strong>: 전체 Q1 점수 기준 (제외 샘플 제외)
+          </div>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
             {[
               ['Fleiss κ (Label)', adminData.iaa.fleiss_kappa, '라벨(F/C/M) 범주 일치도'],
@@ -614,7 +619,7 @@ function AdminPage({ onBack }) {
                               >
                                 {row.final_label || '-'}
                               </td>
-                              <td style={{ padding: '3px 6px' }}>{row.q1 ?? '-'}</td>
+                              <td style={{ padding: '3px 6px' }}>{row.q1 ?? '🚫 제외'}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -630,13 +635,11 @@ function AdminPage({ onBack }) {
           <h2 className="dash-section-title" style={{ marginTop: 28 }}>
             데이터 내보내기
           </h2>
-
-          {/* 최종 데이터셋 */}
           <div className="classification-guide" style={{ marginBottom: 12 }}>
             <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 12, color: '#111827' }}>
               📊 최종 데이터셋 (확정 + Disagreement Resolved 샘플)
             </div>
-            <div>확정 샘플과 합의 완료 샘플의 최종 라벨을 포함합니다.</div>
+            <div>다수결로 확정된 라벨을 포함합니다. 제외 샘플은 포함되지 않습니다.</div>
             <div style={{ marginTop: 4, fontSize: 11, color: '#6b7280' }}>
               형식: sample_id, target_sentence, label, prev_sentence, next_sentence
             </div>
@@ -651,13 +654,11 @@ function AdminPage({ onBack }) {
               </a>
             </div>
           </div>
-
-          {/* Raw 데이터 */}
           <div className="classification-guide">
             <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 12, color: '#111827' }}>
               🗂️ Raw 어노테이션 (개별 응답 전체)
             </div>
-            <div>모든 어노테이터의 개별 응답 (sample_id, annotator, final_label, q1)</div>
+            <div>모든 어노테이터의 개별 응답 (제외 샘플은 q1=null로 표시)</div>
             <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
               <a
                 href={`${BASE_URL}/export/csv`}
@@ -891,6 +892,24 @@ function App() {
     }
   };
 
+  const excludeSample = async () => {
+    if (!annotator) {
+      alert('Annotator를 선택하세요');
+      return;
+    }
+    if (!window.confirm('이 샘플을 제외하시겠습니까?\n제외하면 최종 데이터셋에 포함되지 않습니다.')) return;
+    try {
+      await axios.post(`${BASE_URL}/exclude`, { sample_id: sample.sample_id, annotator });
+      fetchProgress(annotator, category);
+      fetchSubmittedIndices(annotator, category);
+      fetchClassification();
+      if (currentStep < total) await nextSample();
+      else alert('제외 처리 완료');
+    } catch {
+      alert('제외 실패');
+    }
+  };
+
   const jumpList = jumpCategory === 'ALL' ? allSamples : allSamples.filter((s) => s.category === jumpCategory);
   // const scoreDescriptions = { 5: '매우 적절함', 4: '적절함', 3: '보통', 2: '부적절함', 1: '매우 부적절함' };
   // const renderRadios = (q) =>
@@ -1099,13 +1118,16 @@ function App() {
                     const globalIdx = allSamples.findIndex((o) => o.sample_id === s.sample_id);
                     const mySubmitted = annotator && submittedSampleIds.has(s.sample_id);
                     const clf = sampleClassification[s.sample_id];
-                    const mark = mySubmitted
-                      ? '✅'
-                      : clf?.status === 'needs_discussion'
-                        ? '⚠️'
-                        : clf?.status === 'discussion_resolved'
-                          ? '💬'
-                          : '⬜';
+                    const mark =
+                      clf?.status === 'excluded'
+                        ? '🚫'
+                        : mySubmitted
+                          ? '✅'
+                          : clf?.status === 'needs_discussion'
+                            ? '⚠️'
+                            : clf?.status === 'discussion_resolved'
+                              ? '💬'
+                              : '⬜';
                     return (
                       <option key={s.sample_id} value={globalIdx}>
                         {mark} {s.sample_id}
@@ -1137,15 +1159,9 @@ function App() {
 
           {/* 제출 여부
           {annotator && (
-            <div
-              style={{
-                marginBottom: 10,
-                fontSize: 12,
-                fontWeight: 600,
-                color: submittedIndices.has(currentIndex) ? '#16a34a' : '#9ca3af',
-              }}
-            >
-              {submittedIndices.has(currentIndex) ? '✅ 이미 제출한 샘플입니다' : '⬜ 미제출 샘플입니다'}
+            <div style={{ marginBottom: 10, fontSize: 12, fontWeight: 600,
+              color: submittedIndices.has(currentIndex) ? "#16a34a" : "#9ca3af" }}>
+              {submittedIndices.has(currentIndex) ? "✅ 이미 제출한 샘플입니다" : "⬜ 미제출 샘플입니다"}
             </div>
           )} */}
 
@@ -1186,20 +1202,26 @@ function App() {
             </div>
           )}
 
-          <button
-            onClick={excludeSample}
-            style={{
-              background: '#ef4444',
-              color: 'white',
-              marginBottom: '8px',
-            }}
-          >
-            🚫 샘플 제외하기
-          </button>
-
-          <button className="submit-btn" onClick={submit}>
-            Submit
-          </button>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <button className="submit-btn" onClick={submit} style={{ flex: 1 }}>
+              Submit
+            </button>
+            <button
+              onClick={excludeSample}
+              style={{
+                background: '#fee2e2',
+                color: '#dc2626',
+                border: 'none',
+                borderRadius: 8,
+                padding: '8px 14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontSize: 13,
+              }}
+            >
+              🚫 제외
+            </button>
+          </div>
         </div>
       </div>
     </div>

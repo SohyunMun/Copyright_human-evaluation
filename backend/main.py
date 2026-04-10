@@ -52,22 +52,11 @@ def get_all_samples():
 def _migrate_db():
     conn = get_db_conn()
     try:
-        # round 컬럼
         try:
             conn.execute("ALTER TABLE annotations ADD COLUMN round INTEGER DEFAULT 1")
             conn.commit()
         except Exception:
             pass
-        # sample_decisions 테이블 (상의 후 결정된 최종 라벨)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS sample_decisions (
-                sample_id TEXT PRIMARY KEY,
-                final_label TEXT NOT NULL,
-                decided_at TEXT
-            )
-        """)
-
-        # excluded_samples 테이블 (제외된 샘플)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS excluded_samples (
                 sample_id TEXT,
@@ -218,6 +207,8 @@ def _build_iaa_data(conn):
     IAA 계산용 데이터 구축 (Label 기반만)
     - Fleiss κ, Krippendorff α (Label)
     """
+    predicted_map = {s["sample_id"]: s.get("predicted") for s in samples}
+
     cursor = conn.cursor()
     rows = cursor.execute("""
         SELECT sample_id, annotator, final_label, q1 FROM annotations
@@ -258,7 +249,6 @@ def _compute_all_iaa(conn):
         "label_sample_count": len(label_filtered),
     }
 
-    # 라벨 기반 IAA (Q1 <= 3 샘플만)
     if label_filtered:
         try:
             fleiss_input = [
@@ -418,6 +408,23 @@ def exclude_sample(data: dict):
             INSERT OR REPLACE INTO excluded_samples (sample_id, annotator, excluded_at)
             VALUES (?, ?, ?)
         """, (sample_id, annotator, datetime.utcnow().isoformat()))
+
+        exists = cursor.execute("""
+            SELECT COUNT(*) FROM annotations
+            WHERE sample_id=? AND annotator=? AND (round IS NULL OR round = 1)
+        """, (sample_id, annotator)).fetchone()[0]
+
+        if exists > 0:
+            cursor.execute("""
+                UPDATE annotations SET final_label=NULL, q1=NULL
+                WHERE sample_id=? AND annotator=? AND (round IS NULL OR round = 1)
+            """, (sample_id, annotator))
+        else:
+            cursor.execute("""
+                INSERT INTO annotations (sample_id, annotator, final_label, q1, round)
+                VALUES (?, ?, NULL, NULL, 1)
+            """, (sample_id, annotator))
+
         conn.commit()
         return {"status": "excluded"}
     except Exception as e:
@@ -539,34 +546,24 @@ def get_iaa():
         conn.close()
 
 
-# ─────────────────────────────────────────────
-#  샘플 분류
-# ─────────────────────────────────────────────
-
 @app.get("/sample_classification")
 def sample_classification():
     conn = get_db_conn()
     try:
         all_annotations = _get_all_annotations_raw(conn)
-        decisions = _get_decisions(conn)
-        return _classify_samples(all_annotations, decisions)
+        return _classify_samples(all_annotations)
     except Exception as e:
         return {}
     finally:
         conn.close()
 
 
-# ─────────────────────────────────────────────
-#  상의 기능
-# ─────────────────────────────────────────────
-
 @app.get("/discussion_samples")
 def get_discussion_samples():
-    """1~3점 받은 샘플 목록 + 각 어노테이터의 라벨/점수 + 결정 여부"""
     conn = get_db_conn()
     try:
         all_annotations = _get_all_annotations_raw(conn)
-        decisions = _get_decisions(conn)
+        classification = _classify_samples(all_annotations)
         predicted_map = {s["sample_id"]: s.get("predicted") for s in samples}
 
         by_sample = defaultdict(list)
@@ -579,7 +576,9 @@ def get_discussion_samples():
             if not q1_scores:
                 continue
             if not any(q <= 3 for q in q1_scores):
-                continue  # 모두 4~5점 → 상의 불필요
+                continue
+
+            clf = classification.get(sid, {"status": "in_progress", "confirmed_label": None})
 
             ann_details = []
             for a in sorted(anns, key=lambda x: x["annotator"]):
@@ -590,70 +589,30 @@ def get_discussion_samples():
                     "annotator": a["annotator"],
                     "q1": a["q1"],
                     "label": effective_label,
-                    "agreed_with_llm": a["q1"] >= 4 if a["q1"] is not None else None,
                 })
 
+            resolved = clf["status"] == "discussion_resolved"
             result.append({
                 "sample_id": sid,
                 "predicted": predicted_map.get(sid),
                 "annotations": ann_details,
-                "resolved": sid in decisions,
-                "decided_label": decisions.get(sid),
+                "resolved": resolved,
+                "decided_label": clf["confirmed_label"] if resolved else None,
+                "status": clf["status"],
             })
 
-        # 미결 먼저, 결정 완료 나중
         result.sort(key=lambda x: (x["resolved"], x["sample_id"]))
-        return {"samples": result, "total": len(result), "resolved_count": sum(1 for r in result if r["resolved"])}
+        return {
+            "samples": result,
+            "total": len(result),
+            "resolved_count": sum(1 for r in result if r["resolved"])
+        }
     except Exception as e:
         print(f"discussion_samples 오류: {e}")
         return {"samples": [], "total": 0, "resolved_count": 0}
     finally:
         conn.close()
 
-
-@app.post("/set_final_label")
-def set_final_label(data: dict):
-    """상의 완료 후 최종 라벨 결정"""
-    sample_id = data.get("sample_id")
-    final_label = data.get("final_label")
-    if not sample_id or final_label not in ("F", "C", "M"):
-        return {"status": "error", "message": "sample_id와 유효한 final_label(F/C/M) 필요"}
-    conn = get_db_conn()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("""
-            INSERT INTO sample_decisions (sample_id, final_label, decided_at)
-            VALUES (?, ?, ?)
-            ON CONFLICT(sample_id) DO UPDATE SET final_label=excluded.final_label, decided_at=excluded.decided_at
-        """, (sample_id, final_label, datetime.utcnow().isoformat()))
-        conn.commit()
-        return {"status": "saved"}
-    except Exception as e:
-        conn.rollback()
-        return {"status": "error", "message": str(e)}
-    finally:
-        conn.close()
-
-
-@app.delete("/set_final_label")
-def delete_final_label(sample_id: str = Query(...)):
-    """결정 취소"""
-    conn = get_db_conn()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("DELETE FROM sample_decisions WHERE sample_id=?", (sample_id,))
-        conn.commit()
-        return {"status": "deleted"}
-    except Exception as e:
-        conn.rollback()
-        return {"status": "error", "message": str(e)}
-    finally:
-        conn.close()
-
-
-# ─────────────────────────────────────────────
-#  관리자 대시보드
-# ─────────────────────────────────────────────
 
 @app.get("/admin")
 def admin_dashboard():
@@ -692,9 +651,23 @@ def admin_dashboard():
 
         iaa = _compute_all_iaa(conn)
         all_annotations = _get_all_annotations_raw(conn)
-        decisions = _get_decisions(conn)
-        classification = _classify_samples(all_annotations, decisions)
+        classification = _classify_samples(all_annotations)
         classification_counts = dict(Counter(info["status"] for info in classification.values()))
+
+        # 어노테이터별 제외 개수
+        excluded_by_annotator = {}
+        for a in annotators:
+            cnt = cursor.execute("""
+                SELECT COUNT(*) FROM annotations
+                WHERE annotator=? AND q1 IS NULL AND (round IS NULL OR round = 1)
+            """, (a,)).fetchone()[0]
+            excluded_by_annotator[a] = cnt
+
+        # 제외된 고유 샘플 수 (1명이라도 제외한 샘플)
+        excluded_sample_count = cursor.execute("""
+            SELECT COUNT(DISTINCT sample_id) FROM annotations
+            WHERE q1 IS NULL AND (round IS NULL OR round = 1)
+        """).fetchone()[0]
 
         return {
             "total_samples": total,
@@ -702,6 +675,8 @@ def admin_dashboard():
             "category_progress": category_data,
             "iaa": iaa,
             "classification": classification_counts,
+            "excluded_by_annotator": excluded_by_annotator,
+            "excluded_sample_count": excluded_sample_count,
         }
     except Exception as e:
         print(f"admin 오류: {e}")
@@ -709,6 +684,8 @@ def admin_dashboard():
             "total_samples": 0, "progress": {}, "category_progress": {},
             "iaa": {"fleiss_kappa": 0, "alpha_q1": 0, "icc": 0, "alpha_label": 0},
             "classification": {},
+            "excluded_by_annotator": {},
+            "excluded_sample_count": 0,
         }
     finally:
         conn.close()
@@ -779,10 +756,6 @@ def get_all_annotations(annotator: str = None):
         conn.close()
 
 
-# ─────────────────────────────────────────────
-#  내보내기
-# ─────────────────────────────────────────────
-
 @app.get("/export/csv")
 def export_csv():
     conn = get_db_conn()
@@ -832,26 +805,13 @@ def export_json():
 
 @app.get("/export/final_dataset")
 def export_final_dataset():
-    """
-    최종 데이터셋 내보내기
-    형식: {"sample_id", "target_sentence", "label", "prev_sentence", "next_sentence"}
-    - 4~5점 확정 샘플: label = LLM predicted
-    - 상의 완료 샘플: label = 결정된 라벨
-    """
     conn = get_db_conn()
     try:
-        excluded = _get_excluded_samples(conn)
-        
         all_annotations = _get_all_annotations_raw(conn)
-        decisions = _get_decisions(conn)
-        classification = _classify_samples(all_annotations, decisions)
-
+        classification = _classify_samples(all_annotations)
         sample_map = {s["sample_id"]: s for s in samples}
         result = []
-
         for sid, clf in classification.items():
-            if sid in excluded:
-                continue
             if clf["status"] not in ("confirmed", "discussion_resolved"):
                 continue
             s = sample_map.get(sid)
@@ -864,7 +824,6 @@ def export_final_dataset():
                 "prev_sentence": s["previous"] or "",
                 "next_sentence": s["next"] or "",
             })
-
         result.sort(key=lambda x: x["sample_id"])
         output = io.StringIO()
         json.dump(result, output, ensure_ascii=False, indent=2)
