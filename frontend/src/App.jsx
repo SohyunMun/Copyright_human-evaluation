@@ -69,6 +69,8 @@ function DiscussionPage({ onBack, allSamples }) {
   const [sampleDetail, setSampleDetail] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [decidedLabel, setDecidedLabel] = useState('');
+
   const fetchDiscussion = useCallback(async () => {
     setLoading(true);
     try {
@@ -84,6 +86,9 @@ function DiscussionPage({ onBack, allSamples }) {
 
   const selectSample = async (item) => {
     setSelected(item);
+
+    // 선택 시 decidedLabel도 동기화
+    setDecidedLabel(item.decided_label || '');
     const found = allSamples.find((s) => s.sample_id === item.sample_id);
     if (found) {
       const catList = allSamples.filter((s) => s.category === found.category);
@@ -725,7 +730,7 @@ function App() {
           params: { sample_id: sampleData.sample_id, annotator: a, round_num: 1 },
         });
         setIsCorrect(res.data.is_correct);
-        setLabel(res.data.final_label || '');
+        setLabel(res.data.is_correct === false ? res.data.final_label || '' : '');
       } catch {
         resetState();
       }
@@ -901,7 +906,7 @@ function App() {
     try {
       await axios.post(`${BASE_URL}/exclude`, { sample_id: sample.sample_id, annotator });
       fetchProgress(annotator, category);
-      fetchSubmittedIndices(annotator, category);
+      // fetchSubmittedIndices(annotator, category);
       fetchClassification();
       if (currentStep < total) await nextSample();
       else alert('제외 처리 완료');
@@ -934,26 +939,6 @@ function App() {
   if (!sample) return null;
 
   const progressPct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
-
-  const excludeSample = async () => {
-    if (!annotator) return;
-
-    if (!window.confirm('이 샘플을 제외하시겠습니까?')) return;
-
-    try {
-      await axios.post(`${BASE_URL}/exclude`, {
-        sample_id: sample.sample_id,
-        annotator,
-      });
-
-      alert('제외 처리 완료');
-      resetState();
-
-      await nextSample();
-    } catch {
-      alert('제외 실패');
-    }
-  };
 
   return (
     <div className="container">
