@@ -4,10 +4,10 @@ import './App.css';
 
 const BASE_URL = 'https://copyrighthuman-evaluation-production-df30.up.railway.app';
 const ANNOTATORS = ['A', 'B', 'C', 'D', 'E'];
-const CATEGORIES = ['ALL', '경제', '정치', '사회', '문화', '국제', 'IT과학', '스포츠', '교육', '라이프스타일', '지역'];
+const CATEGORIES = ['ALL', 'Business', 'Entertainment', 'Politics', 'Sport', 'Tech'];
 
 const STATUS_LABELS = {
-  confirmed: { text: '✅ 확정 (4~5점)', color: '#16a34a' },
+  confirmed: { text: '✅ 확정 (모두 O)', color: '#16a34a' },
   discussion_resolved: { text: '✅ Disagreement Resolved', color: '#2563eb' },
   needs_discussion: { text: '⚠️ Disagreement', color: '#d97706' },
   in_progress: { text: '⬜ 진행 중', color: '#9ca3af' },
@@ -81,7 +81,7 @@ function DiscussionPage({ onBack, allSamples }) {
 
   useEffect(() => {
     fetchDiscussion();
-  }, []);
+  }, [fetchDiscussion]);
 
   const selectSample = async (item) => {
     setSelected(item);
@@ -107,9 +107,10 @@ function DiscussionPage({ onBack, allSamples }) {
         final_label: decidedLabel,
       });
       alert(`✅ ${selected.sample_id} → ${decidedLabel} 확정`);
-      await fetchDiscussion();
+      // await fetchDiscussion();
       // 업데이트된 데이터로 selected 갱신
       const res = await axios.get(`${BASE_URL}/discussion_samples`);
+      setDiscussionData(res.data);
       const updated = res.data.samples.find((s) => s.sample_id === selected.sample_id);
       if (updated) {
         setSelected(updated);
@@ -164,8 +165,8 @@ function DiscussionPage({ onBack, allSamples }) {
           color: '#854d0e',
         }}
       >
-        ⚠️ 아래 샘플들은 <strong>1명 이상이 1~3점을 선택</strong>하여 LLM 라벨에 동의하지 않은 경우입니다.
-        어노테이터끼리 합의 후 최종 라벨을 결정해주세요.
+        ⚠️ 아래 샘플들은 <strong>1명 이상이 X를 선택</strong>하여 LLM 라벨에 동의하지 않은 경우입니다. 어노테이터끼리
+        합의 후 최종 라벨을 결정해주세요.
       </div>
 
       <div className="main">
@@ -200,9 +201,7 @@ function DiscussionPage({ onBack, allSamples }) {
                       <div style={{ fontWeight: 600, fontSize: 12, color: '#111827' }}>{item.sample_id}</div>
                       <div style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>
                         LLM: <strong>{item.predicted}</strong> &nbsp;|&nbsp;
-                        {item.annotations
-                          .map((a) => `${a.annotator}:${a.q1}점${a.label ? `(${a.label})` : ''}`)
-                          .join(' ')}
+                        {item.annotations.map((a) => `${a.annotator}:${a.is_correct ? 'O' : 'X'}`).join(' ')}
                       </div>
                     </div>
                   ))}
@@ -282,18 +281,21 @@ function DiscussionPage({ onBack, allSamples }) {
                     {selected.annotations.map((a, i) => (
                       <tr
                         key={i}
-                        style={{ borderBottom: '1px solid #f1f5f9', background: a.q1 <= 3 ? '#fef2f2' : 'white' }}
+                        style={{
+                          borderBottom: '1px solid #f1f5f9',
+                          background: a.is_correct === false ? '#fef2f2' : 'white',
+                        }}
                       >
                         <td style={{ padding: '5px 8px', fontWeight: 600 }}>Annotator {a.annotator}</td>
                         <td
                           style={{
                             padding: '5px 8px',
                             textAlign: 'center',
-                            color: a.q1 <= 3 ? '#dc2626' : '#16a34a',
+                            color: a.is_correct === false ? '#dc2626' : '#16a34a',
                             fontWeight: 700,
                           }}
                         >
-                          {a.q1}점 {a.q1 <= 3 ? '⚠️' : '✅'}
+                          {a.is_correct ? 'O' : 'X'}
                         </td>
                         <td
                           style={{
@@ -415,7 +417,7 @@ function AdminPage({ onBack }) {
   const clf = adminData.classification || {};
   const clfTotal = Object.values(clf).reduce((a, b) => a + b, 0);
   const STATUS_DISPLAY = [
-    { key: 'confirmed', label: '확정 (4~5점)', color: '#16a34a' },
+    { key: 'confirmed', label: '확정', color: '#16a34a' },
     { key: 'discussion_resolved', label: 'Disagreement Resolved', color: '#2563eb' },
     { key: 'needs_discussion', label: 'Disagreement', color: '#d97706' },
     { key: 'in_progress', label: '진행 중', color: '#9ca3af' },
@@ -456,8 +458,8 @@ function AdminPage({ onBack }) {
             {[
               ['Fleiss κ (Label)', adminData.iaa.fleiss_kappa, '라벨(F/C/M) 범주 일치도'],
               ['Krippendorff α (Label)', adminData.iaa.alpha_label, '라벨(F/C/M) 일치도'],
-              ['Krippendorff α (Score)', adminData.iaa.alpha_q1, 'Q1 점수(1-5) 서열 일치도'],
-              ['ICC(2,1) (Score)', adminData.iaa.icc, 'Q1 점수 절대 일치도'],
+              // ['Krippendorff α (Score)', adminData.iaa.alpha_q1, 'Q1 점수(1-5) 서열 일치도'],
+              // ['ICC(2,1) (Score)', adminData.iaa.icc, 'Q1 점수 절대 일치도'],
             ].map(([lbl, val, desc]) => (
               <div key={lbl} className="dashboard-card">
                 <div className="dashboard-metric-label">{lbl}</div>
@@ -495,10 +497,10 @@ function AdminPage({ onBack }) {
               <div className="classification-guide">
                 <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 12 }}>분류 기준 안내</div>
                 <div>
-                  • <strong>확정 (4~5점)</strong>: 3명 이상이 모두 Q1 4~5점 → LLM 라벨 확정
+                  • <strong>확정</strong>: 모든 annotator가 O 선택 → LLM 라벨 확정
                 </div>
                 <div>
-                  • <strong>Disagreement Set</strong>: 1명이라도 Q1 1~3점 → 어노테이터 합의 필요
+                  • <strong>Disagreement Set</strong>: 1명 이상 X 선택 → 어노테이터 합의 필요
                 </div>
                 <div>
                   • <strong>Disagreement Resolved</strong>: 최종 라벨 결정됨
@@ -686,7 +688,7 @@ function AdminPage({ onBack }) {
    ═══════════════════════════════════════════════════════════════ */
 function App() {
   const [annotator, setAnnotator] = useState(() => localStorage.getItem('annotator') || null);
-  const [scores, setScores] = useState({ q1: null });
+  const [isCorrect, setIsCorrect] = useState(null);
   const [label, setLabel] = useState('');
   const [sample, setSample] = useState(null);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
@@ -706,7 +708,7 @@ function App() {
 
   const currentStatus = sample ? sampleClassification[sample.sample_id] || null : null;
   const resetState = () => {
-    setScores({ q1: null });
+    setIsCorrect(null);
     setLabel('');
   };
 
@@ -721,7 +723,7 @@ function App() {
         const res = await axios.get(`${BASE_URL}/annotation`, {
           params: { sample_id: sampleData.sample_id, annotator: a, round_num: 1 },
         });
-        setScores({ q1: res.data.q1 });
+        setIsCorrect(res.data.is_correct);
         setLabel(res.data.final_label || '');
       } catch {
         resetState();
@@ -730,18 +732,18 @@ function App() {
     [annotator],
   );
 
-  const fetchSubmittedIndices = useCallback(async (ann, cat) => {
-    if (!ann) return;
-    try {
-      const [idxRes, allRes] = await Promise.all([
-        axios.get(`${BASE_URL}/submitted_ids?annotator=${ann}&category=${cat}`),
-        axios.get(`${BASE_URL}/annotations?annotator=${ann}`),
-      ]);
-      setSubmittedIndices(new Set(idxRes.data.submitted_indices));
-      const ids = (allRes.data || []).filter((a) => a.round === 1 || a.round == null).map((a) => a.sample_id);
-      setSubmittedSampleIds(new Set(ids));
-    } catch {}
-  }, []);
+  // const fetchSubmittedIndices = useCallback(async (ann, cat) => {
+  //   if (!ann) return;
+  //   try {
+  //     const [idxRes, allRes] = await Promise.all([
+  //       axios.get(`${BASE_URL}/submitted_ids?annotator=${ann}&category=${cat}`),
+  //       axios.get(`${BASE_URL}/annotations?annotator=${ann}`),
+  //     ]);
+  //     setSubmittedIndices(new Set(idxRes.data.submitted_indices));
+  //     const ids = (allRes.data || []).filter((a) => a.round === 1 || a.round == null).map((a) => a.sample_id);
+  //     setSubmittedSampleIds(new Set(ids));
+  //   } catch {}
+  // }, []);
 
   const fetchSampleByIndex = async (index, cat) => {
     const res = await axios.get(`${BASE_URL}/sample`, { params: { index, category: cat } });
@@ -788,9 +790,10 @@ function App() {
     fetchAllSamples();
     fetchClassification();
     fetchDiscussionCount();
+
     if (saved) {
       fetchProgress(saved, 'ALL');
-      fetchSubmittedIndices(saved, 'ALL');
+      // fetchSubmittedIndices(saved, 'ALL');
       axios.get(`${BASE_URL}/last_index?annotator=${saved}&category=ALL`).then((res) => {
         fetchSampleByIndex(res.data.last_index, 'ALL').then((data) => loadAnnotation(data, saved));
       });
@@ -805,15 +808,15 @@ function App() {
       return;
     }
     fetchSampleByIndex(0, category);
-    fetchProgress(annotator, category);
-    if (annotator) fetchSubmittedIndices(annotator, category);
+    if (annotator) fetchProgress(annotator, category);
   }, [category]);
 
   const handleAnnotatorSelect = async (a) => {
     setAnnotator(a);
     localStorage.setItem('annotator', a);
+
     fetchProgress(a, category);
-    fetchSubmittedIndices(a, category);
+    // fetchSubmittedIndices(a, category);
     const res = await axios.get(`${BASE_URL}/last_index?annotator=${a}&category=${category}`);
     const data = await fetchSampleByIndex(res.data.last_index, category);
     await loadAnnotation(data, a);
@@ -830,35 +833,43 @@ function App() {
     await loadAnnotation(data, annotator);
   };
 
-  const setScore = (key, value) => setScores({ ...scores, [key]: value });
+  // const setScore = (key, value) => setScores({ ...scores, [key]: value });
 
   const submit = async () => {
     if (!annotator) {
       alert('Annotator를 선택하세요');
       return;
     }
-    if (scores.q1 === null) {
-      alert('Q1 점수를 선택해주세요');
+    if (isCorrect === null) {
+      alert('O/X를 선택해주세요');
       return;
     }
-    if (scores.q1 <= 3 && label === '') {
-      alert('Q1이 1~3점인 경우 Final Label을 선택해야 합니다');
+
+    if (isCorrect === false && label === '') {
+      alert('X 선택 시 Final Label을 지정해야 합니다');
       return;
     }
     try {
       await axios.post(`${BASE_URL}/submit`, {
         sample_id: sample.sample_id,
         annotator,
-        q1: scores.q1,
-        final_label: scores.q1 <= 3 ? label : null,
+        is_correct: isCorrect,
+        final_label: isCorrect === false ? label : null,
         round: 1,
       });
       fetchProgress(annotator, category);
-      fetchSubmittedIndices(annotator, category);
+      // fetchSubmittedIndices(annotator, category);
       fetchClassification();
       fetchDiscussionCount();
+
       if (currentStep < total) {
         await nextSample();
+
+        setSubmittedSampleIds((prev) => {
+          const newSet = new Set(prev);
+          newSet.add(sample.sample_id);
+          return newSet;
+        });
       } else {
         const pRes = await axios.get(`${BASE_URL}/progress?annotator=${annotator}&category=${category}`);
         const remaining = pRes.data.total - pRes.data.done;
@@ -881,13 +892,13 @@ function App() {
   };
 
   const jumpList = jumpCategory === 'ALL' ? allSamples : allSamples.filter((s) => s.category === jumpCategory);
-  const scoreDescriptions = { 5: '매우 적절함', 4: '적절함', 3: '보통', 2: '부적절함', 1: '매우 부적절함' };
-  const renderRadios = (q) =>
-    [1, 2, 3, 4, 5].map((n) => (
-      <label key={n} className="radio">
-        <input type="radio" checked={scores[q] === n} onChange={() => setScore(q, n)} /> {n} : {scoreDescriptions[n]}
-      </label>
-    ));
+  // const scoreDescriptions = { 5: '매우 적절함', 4: '적절함', 3: '보통', 2: '부적절함', 1: '매우 부적절함' };
+  // const renderRadios = (q) =>
+  //   [1, 2, 3, 4, 5].map((n) => (
+  //     <label key={n} className="radio">
+  //       <input type="radio" checked={scores[q] === n} onChange={() => setScore(q, n)} /> {n} : {scoreDescriptions[n]}
+  //     </label>
+  //   ));
 
   if (page === 'admin') return <AdminPage onBack={() => setPage('main')} />;
   if (page === 'discussion')
@@ -917,7 +928,9 @@ function App() {
       });
 
       alert('제외 처리 완료');
-      nextSample();
+      resetState();
+
+      await nextSample();
     } catch {
       alert('제외 실패');
     }
@@ -1078,7 +1091,7 @@ function App() {
                     const data = await fetchSampleByIndex(catIdx, cat);
                     await loadAnnotation(data, annotator);
                     fetchProgress(annotator, cat);
-                    if (annotator) fetchSubmittedIndices(annotator, cat);
+                    // if (annotator) fetchSubmittedIndices(annotator, cat);
                     setJumpOpen(false);
                   }}
                 >
@@ -1122,7 +1135,7 @@ function App() {
             </div>
           </div>
 
-          {/* 제출 여부 */}
+          {/* 제출 여부
           {annotator && (
             <div
               style={{
@@ -1134,25 +1147,34 @@ function App() {
             >
               {submittedIndices.has(currentIndex) ? '✅ 이미 제출한 샘플입니다' : '⬜ 미제출 샘플입니다'}
             </div>
-          )}
+          )} */}
 
           {/* Q1 */}
           <div className="question">
             <p>
-              Q. LLM이 부여한 라벨이 적절한가? <span className="required">*</span>
+              Q. Is the LLM label correct? <span className="required">*</span>
             </p>
-            <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 6 }}>
-              4~5점: LLM 라벨({sample.predicted}) 확정 &nbsp;|&nbsp; 1~3점: 아래에서 직접 라벨 선택 필요
+
+            <div className="label-group">
+              <button onClick={() => setIsCorrect(true)} className={`label-btn ${isCorrect === true ? 'active' : ''}`}>
+                O
+              </button>
+
+              <button
+                onClick={() => setIsCorrect(false)}
+                className={`label-btn ${isCorrect === false ? 'active' : ''}`}
+              >
+                X
+              </button>
             </div>
-            {renderRadios('q1')}
           </div>
 
           {/* Final Label (q1 <= 3일 때만) */}
-          {scores.q1 !== null && scores.q1 <= 3 && (
+          {isCorrect === false && (
             <div className="question">
               <p>
                 Final Label <span className="required">*</span>
-                <span style={{ fontSize: 11, color: '#d97706', marginLeft: 6 }}>(Q1 1~3점 → 직접 라벨 선택)</span>
+                <span style={{ fontSize: 11, color: '#d97706', marginLeft: 6 }}>(Disagree → 직접 라벨 선택)</span>
               </p>
               <div className="label-group">
                 {['F', 'C', 'M'].map((l) => (
