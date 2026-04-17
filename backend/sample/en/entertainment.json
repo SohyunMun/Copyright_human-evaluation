@@ -7,7 +7,7 @@
         {
           "sample_id": "entertainment_1_1",
           "target_sentence": "Zoe Ball has begun her tenure as BBC Radio 2's first female weekday breakfast host by playing Aretha Franklin's Respect as her first song.",
-          "label": "M",
+          "label": "C",
           "prev_sentence": null,
           "next_sentence": "\"It had to be a dame on this occasion,\" she told listeners."
         },
@@ -28,7 +28,7 @@
         {
           "sample_id": "entertainment_1_4",
           "target_sentence": "She began Monday's show with the words: \"Hello, my name is Zoe.",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "Ball has taken over from Chris Evans in the most listened-to slot on the UK airwaves.",
           "next_sentence": "Good morning Radio 2 superstar listeners, here we go.\""
         },
@@ -42,7 +42,7 @@
         {
           "sample_id": "entertainment_1_6",
           "target_sentence": "The saying \"How's your belly off for spots?\" is an alternative way of asking: \"How are you?\"",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "Good morning Radio 2 superstar listeners, here we go.\"",
           "next_sentence": "Ball inherits about nine million listeners from Evans and told listeners he sent her a \"lovely message\" on Sunday night."
         },
@@ -112,7 +112,7 @@
         {
           "sample_id": "entertainment_1_16",
           "target_sentence": "Speaking about her plans, Ball told BBC News: \"The thing we really wanna do is bring lots of music, lots of energy, not too much chat - but enough, and we want people to have learned something by the end of the show.\"",
-          "label": "M",
+          "label": "C",
           "prev_sentence": "Her breakfast show will run from 06:30-09:30 Monday to Friday, with Tina Daheley reading the news, Mike Williams on sport and Richie Anderson doing travel.",
           "next_sentence": "The 48-year-old said features on the new show would include Why Wednesdays, where researchers from QI will answer listeners' questions, and The Ken O'Clock News, building up to Ken Bruce at 09:30."
         },
@@ -216,7 +216,7 @@
         {
           "sample_id": "entertainment_2_1",
           "target_sentence": "HE was the highest paid entertainer of his time; a pianist, singer and actor with such flamboyance he became known as Mr Showmanship.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": null,
           "next_sentence": "About 40 women and girls gave 35-year-old American artist Lee Liberace a hysterical welcome as he arrived in Southampton on board the 81,000-ton Queen Mary."
         },
@@ -237,14 +237,14 @@
         {
           "sample_id": "entertainment_2_4",
           "target_sentence": "When Liberace appeared, accompanied by his mother and violinist brother George, the fans went wild.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "The welcome on September 25, 1956, was the largest given to a member of the entertainment world at the port since the North Atlantic service was reconvened after the Second World War.",
           "next_sentence": "They surrounded the performer shrieking with joy as he made his way to his special six-coach train."
         },
         {
           "sample_id": "entertainment_2_5",
           "target_sentence": "They surrounded the performer shrieking with joy as he made his way to his special six-coach train.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "When Liberace appeared, accompanied by his mother and violinist brother George, the fans went wild.",
           "next_sentence": "The welcome continued after Liberace boarded the train."
         },
@@ -258,14 +258,14 @@
         {
           "sample_id": "entertainment_2_7",
           "target_sentence": "He sat with a beaming smile as the welcoming party surrounded his coach.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "The welcome continued after Liberace boarded the train.",
           "next_sentence": "Many of the ecstatic girls pressed kisses on the glass, others put their hands through the coach window in an attempt to touch their hero."
         },
         {
           "sample_id": "entertainment_2_8",
           "target_sentence": "Many of the ecstatic girls pressed kisses on the glass, others put their hands through the coach window in an attempt to touch their hero.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "He sat with a beaming smile as the welcoming party surrounded his coach.",
           "next_sentence": "Dock workers enjoying the scene added to the excitement with shouts of “Swoon.”"
         },
@@ -314,7 +314,7 @@
         {
           "sample_id": "entertainment_2_15",
           "target_sentence": "He told the reporters of how he wanted to be a typical American tourist in England, getting into the back roads, seeing the countryside and meeting the people there and in the suburbs.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Before coming ashore, Liberace spent nearly an hour on the Queen Mary’s sun deck posing for the press with his mother and brother.",
           "next_sentence": "“I understand you’ve had a rather unpleasant summer here,” he said."
         },
@@ -349,7 +349,7 @@
         {
           "sample_id": "entertainment_2_20",
           "target_sentence": "He explained to the press that he dressed in somewhat flamboyant style because he was a member of a glamorous world - the entertainment world.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "As these pictures from the time show, the star wore a black and white pebble heather two-piece suit with black tie and black shoes.",
           "next_sentence": "Liberace brought his concert grand piano over on the ship which was sent to London by road."
         },
@@ -370,7 +370,7 @@
         {
           "sample_id": "entertainment_2_23",
           "target_sentence": "Boos could also be heard coming from a group of students who marched in carrying a banner declaring “We hate Liberace.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "At Waterloo a large crowd cheered wildly as the star’s train arrived at 12.25pm.",
           "next_sentence": "Charlie Kunz forever.”"
         },
@@ -404,7 +404,7 @@
         {
           "sample_id": "entertainment_3_3",
           "target_sentence": "We’ll also run through the top #FakeNews and Agent Provocateur stunts being churned out by the mainstream media, designed to intentionally deceive not just US audiences, but the global population – in order to build the case for western intervention in South America.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "In the first hour we’ll discuss the week’s regime change circus in Venezuela, as the wheels come of Washington’s NeoCon folly, a cowboy operation which is looking more like ‘Maidan on Meth, led by a motley cast of white collar (and nosed) criminals led by the US Senate’s own Tony Montana, Little Marco Rubio, and PNAC pensioner John ‘The Walrus’ Bolton, and Virgin billionaire Richard ‘Stripe’ Branson – hoping to hoist this week’s CIA-backed puppet Juan Guaido on to the Neoliberal throne in Caracas.",
           "next_sentence": "In the final hour, we’ll take a spin around Basil’s Magic Roundabout, with the Sunday Wire’s roving correspondent for Culture & Sport, Basil Valentine, to see who’s on and who’s off this week: Tony Blair’s attempt Labour Party coup could be a flop spawned from the contrived crisis of “Antisemitism in the Labour Party”, and across the pond the Democratic 2020 field is withering already and looks to degrade even further as Bernie Sanders jumped on the NeoCon regome change bandwagon with Venezuela."
         },
@@ -418,7 +418,7 @@
         {
           "sample_id": "entertainment_3_5",
           "target_sentence": "Also, Israel’s troubled Bibi Netanyahu goes hard-right forming a ‘Jewish Fascism‘ coalition in Israel.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "In the final hour, we’ll take a spin around Basil’s Magic Roundabout, with the Sunday Wire’s roving correspondent for Culture & Sport, Basil Valentine, to see who’s on and who’s off this week: Tony Blair’s attempt Labour Party coup could be a flop spawned from the contrived crisis of “Antisemitism in the Labour Party”, and across the pond the Democratic 2020 field is withering already and looks to degrade even further as Bernie Sanders jumped on the NeoCon regome change bandwagon with Venezuela.",
           "next_sentence": "You literally couldn’t make it up ."
         },
@@ -501,7 +501,7 @@
         {
           "sample_id": "entertainment_4_8",
           "target_sentence": "her words were echoed by iris director sir richard eyre who called marie leroi s work  extraordinarily thought provoking .",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "while the subject matter of mutants unsettled some involved in the judging process  the overwhelming majority found it fascinating   she added.",
           "next_sentence": "the award  for first time authors  is open to books from genres including fiction  poetry  biography  memoir  history  politics  science and current affairs."
         },
@@ -542,14 +542,14 @@
         {
           "sample_id": "entertainment_5_3",
           "target_sentence": "although an oscar has so far eluded her  her status as one of hollywood s favourite actresses remains solid.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "bening  who was born in texas in 1958  has gained prominence for a string of key roles.",
           "next_sentence": "one of the biggest oscars buzzes in recent years was for bening s role as troubled carolyn burnham in 1999 s american beauty."
         },
         {
           "sample_id": "entertainment_5_4",
           "target_sentence": "one of the biggest oscars buzzes in recent years was for bening s role as troubled carolyn burnham in 1999 s american beauty.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "although an oscar has so far eluded her  her status as one of hollywood s favourite actresses remains solid.",
           "next_sentence": "but her deliciously neurotic portrayal of surburban life turning sour was overlooked in favour of hilary swank s leading role in boys don t cry."
         },
@@ -591,14 +591,14 @@
         {
           "sample_id": "entertainment_5_10",
           "target_sentence": "however the high-profile performance enabled bening to capture roles in a number of big budget hollywood productions  co-starring with some of hollywood s greatest players  including robert de niro and harrison ford.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "despite some rave reviews  bening did not win the best supporting actress academy award.",
           "next_sentence": "but it was her role opposite warren beatty in 1991 gangster flick bugsy which had the greatest impact."
         },
         {
           "sample_id": "entertainment_5_11",
           "target_sentence": "but it was her role opposite warren beatty in 1991 gangster flick bugsy which had the greatest impact.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "however the high-profile performance enabled bening to capture roles in a number of big budget hollywood productions  co-starring with some of hollywood s greatest players  including robert de niro and harrison ford.",
           "next_sentence": "bening played virginia hill  another role which won her high critical acclaim  but the film only picked up two of a staggering 12 oscar nominations."
         },
@@ -640,7 +640,7 @@
         {
           "sample_id": "entertainment_5_17",
           "target_sentence": "bening was the first choice to play the female lead in american beauty  director sam mendes  film debut which was a critical and commercial success - but the actress had to be content with a bafta award for her strong performance.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "she played michael douglas  opposite number in romantic comedy the american president  and as a  fiery  queen elizabeth i in a contemporary adaptation of shakespeare s richard iii.",
           "next_sentence": "but current film being julia has made bening an award-winning actress rather than the perennial nominee  with success at the golden globes."
         },
@@ -667,7 +667,7 @@
         {
           "sample_id": "entertainment_6_1",
           "target_sentence": "Britain's Got Talent star Marc Spelmann declared the show \"made a mockery of entertainment\" in a scathing Twitter rant before he returned as mystery magician X.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": null,
           "next_sentence": "The illusionist was on the reality show last year, but returned for the 2019 series in a mask performing under the name X."
         },
@@ -681,14 +681,14 @@
         {
           "sample_id": "entertainment_6_3",
           "target_sentence": "Last year, he was embroiled in controversy as he got caught slamming the show in a series of blistering tweets, sent before his first audition.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "The illusionist was on the reality show last year, but returned for the 2019 series in a mask performing under the name X.",
           "next_sentence": "In unearthed tweets from 2013 - the year shadow theatre act Attraction won - the magician blasted BGT, calling it a \"mockery of entertainment\" and urging his followers to switch off."
         },
         {
           "sample_id": "entertainment_6_4",
           "target_sentence": "In unearthed tweets from 2013 - the year shadow theatre act Attraction won - the magician blasted BGT, calling it a \"mockery of entertainment\" and urging his followers to switch off.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "Last year, he was embroiled in controversy as he got caught slamming the show in a series of blistering tweets, sent before his first audition.",
           "next_sentence": "One tweet referred to the musician who left her seat to egg show boss Simon Cowell during the live final of the series."
         },
@@ -702,7 +702,7 @@
         {
           "sample_id": "entertainment_6_6",
           "target_sentence": "It stated: \"#bgt #eggattack musician chucking eggs at Simon.",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "One tweet referred to the musician who left her seat to egg show boss Simon Cowell during the live final of the series.",
           "next_sentence": "Wonder if it was truly random or a publicity stunt to detract from poor final..??\""
         },
@@ -737,14 +737,14 @@
         {
           "sample_id": "entertainment_6_11",
           "target_sentence": "The tweets shocked BGT fans as the news came after his performance on last year's show left viewers in tears.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Spelmann told Mirror Online: \"I've changed rather a lot in the last six years and the off-hand tweets I made about Britain's Got Talent many years ago in no way reflect my thoughts and feelings on the show now.\"",
           "next_sentence": "He tugged at heartstrings as he opened up about his wife's struggle with IVF and battle with cancer while pregnant in the middle of his performance."
         },
         {
           "sample_id": "entertainment_6_12",
           "target_sentence": "He tugged at heartstrings as he opened up about his wife's struggle with IVF and battle with cancer while pregnant in the middle of his performance.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "The tweets shocked BGT fans as the news came after his performance on last year's show left viewers in tears.",
           "next_sentence": "\"Oh god it's emotional,\" wailed Ant as tears streamed down his face as he watched from the sidelines with buddy Dec Donnelly, who was also crying."
         },
@@ -758,7 +758,7 @@
         {
           "sample_id": "entertainment_6_14",
           "target_sentence": "After getting a standing ovation from the audience, Marc also received a hug from teary Ant, who said: \"You had me in tears man.\"",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "\"Oh god it's emotional,\" wailed Ant as tears streamed down his face as he watched from the sidelines with buddy Dec Donnelly, who was also crying.",
           "next_sentence": "Spelmann returned to the show for the 2019 series and kept his true identity under wraps as he performed as X during the audition phase and the semi-final this week and hadn't even spoken on stage before tonight."
         },
@@ -876,7 +876,7 @@
         {
           "sample_id": "entertainment_7_10",
           "target_sentence": "ms bennett said the new roles would benefit those making programmes within the bbc as well as those making shows for the channel independently.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "similar positions will also be created in the other departments  with the new commissioning editor for documentaries based in bristol and the daytime commissioning editor in birmingham.",
           "next_sentence": "a strong independent sector and a flourishing in-house production base are not mutually exclusive and will stimulate the competition that will deliver the best ideas to the audience   she said."
         },
@@ -924,7 +924,7 @@
         {
           "sample_id": "entertainment_8_5",
           "target_sentence": "joshua reynolds: the creation of celebrity will feature prints  caricatures  and sculpture by the 18th century artist  who painted some of the most famous personalities of his day.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "the exhibition of reynolds  work will be shown at tate britain from may.",
           "next_sentence": "portrait of omai fetched the second highest amount for a british painting when it was sold at auction for £10.3m in 2001. it was bought by a london dealer who sold it on to a collector."
         },
@@ -959,7 +959,7 @@
         {
           "sample_id": "entertainment_8_10",
           "target_sentence": "he became a darling of london society and was invited to all the best parties by people who were fascinated by such an exotic character.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "the portrait is of a young man who was dubbed  the noble savage  when he arrived in london from polynesia.",
           "next_sentence": "sir joshua painted him after his arrival in 1774  and it became the artist s most famous work after it was first exhibited at the royal academy in 1776."
         },
@@ -993,7 +993,7 @@
         {
           "sample_id": "entertainment_9_3",
           "target_sentence": "presley will feature in the charts for several more months as all 18 of his original uk chart-toppers are reissued.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "mario kombou  who plays the presley role on stage  will sing one night on friday s bbc one show as producers are unable to use presley video footage.",
           "next_sentence": "a top of the pops spokesperson said:  it s a very special number one as it s the uk s 1 000th."
         },
@@ -1007,14 +1007,14 @@
         {
           "sample_id": "entertainment_9_5",
           "target_sentence": "we wanted to pay tribute to elvis in the best way we knew how  so we thought getting a professional would be the best way for top of the pops to do that.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "a top of the pops spokesperson said:  it s a very special number one as it s the uk s 1 000th.",
           "next_sentence": "kombou is likely to appear on the show again next week as the next presley re-release  a fool such as i  is on course to give him his third number one in three weeks."
         },
         {
           "sample_id": "entertainment_9_6",
           "target_sentence": "kombou is likely to appear on the show again next week as the next presley re-release  a fool such as i  is on course to give him his third number one in three weeks.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "we wanted to pay tribute to elvis in the best way we knew how  so we thought getting a professional would be the best way for top of the pops to do that.",
           "next_sentence": "kombou plays vince everett in jailhouse rock - the same role presley played in the 1957 film of the same name."
         },
@@ -1041,7 +1041,7 @@
         {
           "sample_id": "entertainment_10_2",
           "target_sentence": "the bravery  who have been compared to the cure and new order  were the most heavily-tipped act in the survey of 110 impartial critics and broadcasters.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "new york rockers top talent poll new york electro-rock group the bravery have come top of the bbc news website s sound of 2005 poll to find the music scene s most promising new act.",
           "next_sentence": "rock band keane won sound of 2004 while us rapper 50 cent topped sound of 2003. other new artists in this year s list include london indie group bloc party at second and uk rapper kano third."
         },
@@ -1069,7 +1069,7 @@
         {
           "sample_id": "entertainment_10_6",
           "target_sentence": "singer sam endicott said he felt  great  about coming top of the sound of 2005 list.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "they were the subject of a record company bidding war in 2004 and their debut single  unconditional  caused a huge buzz when it was released in the uk in november.",
           "next_sentence": "anyone that says they don t want a zillion screaming fans is a jackass  a liar   he said."
         },
@@ -1222,14 +1222,14 @@
         {
           "sample_id": "entertainment_11_6",
           "target_sentence": "The two E-series Black Hawks hugged the fire-scarred spruce of the Chugach National Forest, pounding into a parched blueberry field.",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "They arrived in July of 2062, the time of year when the salmon memorials begin.",
           "next_sentence": "Two dozen paramilitary police, members of the Old Bears, grabbed their gear, leaped from the choppers and disappeared into the treeline."
         },
         {
           "sample_id": "entertainment_11_7",
           "target_sentence": "Two dozen paramilitary police, members of the Old Bears, grabbed their gear, leaped from the choppers and disappeared into the treeline.",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "The two E-series Black Hawks hugged the fire-scarred spruce of the Chugach National Forest, pounding into a parched blueberry field.",
           "next_sentence": "It would be their final mission."
         },
@@ -1257,7 +1257,7 @@
         {
           "sample_id": "entertainment_11_11",
           "target_sentence": "Their target was 84-year-old Stephen Brower, a former physician and Republican senator from Massachusetts who would later be convicted of crimes against the environment, specifically for “denying and downplaying life-threatening climate change impacts for personal gain.”",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "They hiked through the rawboned lowland forests for nearly two hours toward Katalla, a remote smuggling hub controlled by the United Provinces of Alaska Militia (UPAM).",
           "next_sentence": "Intelligence sources said Brower had been living near Katalla for more than a year with his wife, his daughter, her husband, their twins, two armed guards and a courier who came and went regularly."
         },
@@ -1306,7 +1306,7 @@
         {
           "sample_id": "entertainment_11_18",
           "target_sentence": "Sarec could scarcely see the fallen skier, but she could hear him screaming.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "Then black soldier flies swarmed the man, obscuring the scene.",
           "next_sentence": "As Sarec, Vail Resort’s chief entomologist, raced down the mountain, her tangled brown ponytail whipped her face."
         },
@@ -1417,7 +1417,7 @@
         {
           "sample_id": "entertainment_12_12",
           "target_sentence": "Over at Magic, Ronan Keating and Harriet Scott are celebrating the biggest audience the station's breakfast show has ever attracted - 1.53 million.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "The station split its breakfast shows into Monday-Thursday and Friday-Sunday last year.",
           "next_sentence": "There will also be jubilation at the British-only radio station Union Jack, whose exclusively domestic content has recorded the fastest-growing audience in the UK."
         },
@@ -1458,35 +1458,35 @@
         {
           "sample_id": "entertainment_13_1",
           "target_sentence": "The New York Post has uncovered tweets demonstrating that Wright-Piersanti, while employed at Newark’s Star-Ledger newspaper in New Jersey a decade ago, had a particular fondness for the use of the word “douche.”",
-          "label": "F",
+          "label": "M",
           "prev_sentence": null,
           "next_sentence": "“Wright-Piersanti’s Twitter page suggests he adores the word ‘douche,’ which crops up more than a dozen times,” the New York Post‘s Keith Kelly wrote Thursday evening."
         },
         {
           "sample_id": "entertainment_13_2",
           "target_sentence": "“Wright-Piersanti’s Twitter page suggests he adores the word ‘douche,’ which crops up more than a dozen times,” the New York Post‘s Keith Kelly wrote Thursday evening.",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "The New York Post has uncovered tweets demonstrating that Wright-Piersanti, while employed at Newark’s Star-Ledger newspaper in New Jersey a decade ago, had a particular fondness for the use of the word “douche.”",
           "next_sentence": "In fact, he even described the work product his future colleagues at the New York Times publish as “douche zest.”"
         },
         {
           "sample_id": "entertainment_13_3",
           "target_sentence": "In fact, he even described the work product his future colleagues at the New York Times publish as “douche zest.”",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "“Wright-Piersanti’s Twitter page suggests he adores the word ‘douche,’ which crops up more than a dozen times,” the New York Post‘s Keith Kelly wrote Thursday evening.",
           "next_sentence": "“What the NYTimes does is take your story, spice it up with a dash of *douche zest* and then a million people read it,” Wright-Piersanti tweeted on October 13, 2010, according to the New York Post."
         },
         {
           "sample_id": "entertainment_13_4",
           "target_sentence": "“What the NYTimes does is take your story, spice it up with a dash of *douche zest* and then a million people read it,” Wright-Piersanti tweeted on October 13, 2010, according to the New York Post.",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "In fact, he even described the work product his future colleagues at the New York Times publish as “douche zest.”",
           "next_sentence": "New York Times spokeswomen Danielle Rhoades-Ha and Eileen Murphy have not replied to a detailed request for comment from Breitbart News asking if the newspaper agrees with its politics editor’s characterization of its product as “douche zest.”"
         },
         {
           "sample_id": "entertainment_13_5",
           "target_sentence": "New York Times spokeswomen Danielle Rhoades-Ha and Eileen Murphy have not replied to a detailed request for comment from Breitbart News asking if the newspaper agrees with its politics editor’s characterization of its product as “douche zest.”",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "“What the NYTimes does is take your story, spice it up with a dash of *douche zest* and then a million people read it,” Wright-Piersanti tweeted on October 13, 2010, according to the New York Post.",
           "next_sentence": "They have also not provided a definition of the term “douche zest.”"
         },
@@ -1500,28 +1500,28 @@
         {
           "sample_id": "entertainment_13_7",
           "target_sentence": "This is not the only time Wright-Piersanti used the term “douche” to describe what would become his future employer, the New York Times, either.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "They have also not provided a definition of the term “douche zest.”",
           "next_sentence": "“On Oct. 10, 2013, he was at it again, venting against a Times reporter who was dispatched to do a story from Montclair, NJ,” the Post‘s Kelly wrote."
         },
         {
           "sample_id": "entertainment_13_8",
           "target_sentence": "“On Oct. 10, 2013, he was at it again, venting against a Times reporter who was dispatched to do a story from Montclair, NJ,” the Post‘s Kelly wrote.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "This is not the only time Wright-Piersanti used the term “douche” to describe what would become his future employer, the New York Times, either.",
           "next_sentence": "“‘Maybe NYT was right to send a douche,’ he tweeted before apparently quoting a line from an NYT story that offended him: ‘Montclair likes to think of itself as having more of a mix of races and classes than other suburbs.'” Another newly resurfaced tweet, thanks to the New York Post‘s reporting since Wright-Piersanti has again hidden his Twitter account from the public, is one where he slanders the Amish–and uses the term “douche” to do so as well."
         },
         {
           "sample_id": "entertainment_13_9",
           "target_sentence": "“‘Maybe NYT was right to send a douche,’ he tweeted before apparently quoting a line from an NYT story that offended him: ‘Montclair likes to think of itself as having more of a mix of races and classes than other suburbs.'” Another newly resurfaced tweet, thanks to the New York Post‘s reporting since Wright-Piersanti has again hidden his Twitter account from the public, is one where he slanders the Amish–and uses the term “douche” to do so as well.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "“On Oct. 10, 2013, he was at it again, venting against a Times reporter who was dispatched to do a story from Montclair, NJ,” the Post‘s Kelly wrote.",
           "next_sentence": "Kelly wrote, “And on the Amish, he tweeted in August 2010, “I’m working on a tell-all expose of the Amish; calling it, ‘more like Pennsylvania Douche.’” The Times spokeswomen, Rhoades-Ha and Murphy, have not said if the newspaper thinks Wright-Piersanti’s use of the word “douche” repeatedly on Twitter is acceptable."
         },
         {
           "sample_id": "entertainment_13_10",
           "target_sentence": "Kelly wrote, “And on the Amish, he tweeted in August 2010, “I’m working on a tell-all expose of the Amish; calling it, ‘more like Pennsylvania Douche.’” The Times spokeswomen, Rhoades-Ha and Murphy, have not said if the newspaper thinks Wright-Piersanti’s use of the word “douche” repeatedly on Twitter is acceptable.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "“‘Maybe NYT was right to send a douche,’ he tweeted before apparently quoting a line from an NYT story that offended him: ‘Montclair likes to think of itself as having more of a mix of races and classes than other suburbs.'” Another newly resurfaced tweet, thanks to the New York Post‘s reporting since Wright-Piersanti has again hidden his Twitter account from the public, is one where he slanders the Amish–and uses the term “douche” to do so as well.",
           "next_sentence": "But the Times did provide the Post with the same statement they provided the rest of the media in response to the earlier tweets: “We are aware of these tweets, which are a clear violation of our standards."
         },
@@ -1535,7 +1535,7 @@
         {
           "sample_id": "entertainment_13_12",
           "target_sentence": "We are reviewing next steps.”",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "But the Times did provide the Post with the same statement they provided the rest of the media in response to the earlier tweets: “We are aware of these tweets, which are a clear violation of our standards.",
           "next_sentence": "These revelations that Wright-Piersanti assailed his then-future colleagues and employer using this foul language come in the wake of a Breitbart News investigation published on Thursday morning that discovered Wright-Piersanti made a number of antisemitic and racist comments on Twitter over the years."
         },
@@ -1563,14 +1563,14 @@
         {
           "sample_id": "entertainment_13_16",
           "target_sentence": "This latest example of the pervasive culture of racism and antisemitism inside the New York Times institution-wide comes in the wake of several other recent examples of such activity.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "In statements to several media outlets through spokeswoman Rhoades-Ha, The Times admitted the tweets were a violation of the Times‘ standards and that the newspaper was considering next steps and options regarding what to do in the future.",
           "next_sentence": "Now, former deputy politics editor Jonathan Weisman was demoted recently, in part, because of racially insensitive things he said, which the Times called a lapse in judgment."
         },
         {
           "sample_id": "entertainment_13_17",
           "target_sentence": "Now, former deputy politics editor Jonathan Weisman was demoted recently, in part, because of racially insensitive things he said, which the Times called a lapse in judgment.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "This latest example of the pervasive culture of racism and antisemitism inside the New York Times institution-wide comes in the wake of several other recent examples of such activity.",
           "next_sentence": "Weisman was also behind a list during the Barack Obama administration that the Times published, then quietly removed, listing Jewish lawmakers in opposition to the Obama Iran deal."
         },
@@ -1591,14 +1591,14 @@
         {
           "sample_id": "entertainment_13_20",
           "target_sentence": "The person or persons responsible for those publishing decisions have not been publicly identified yet, but the Times, under criticism, stopped publication of all cartoons in the international edition to prevent more antisemitism from reaching its pages.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "The Times also has faced serious criticism for having published a series of antisemitic cartoons in its international edition.",
           "next_sentence": "What’s more, in the editorial wing of the paper, open leftist Sarah Jeong–who has made a number of blatantly racist statements–remains employed as the Times has rallied behind her despite her history of racially insensitive comments."
         },
         {
           "sample_id": "entertainment_13_21",
           "target_sentence": "What’s more, in the editorial wing of the paper, open leftist Sarah Jeong–who has made a number of blatantly racist statements–remains employed as the Times has rallied behind her despite her history of racially insensitive comments.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "The person or persons responsible for those publishing decisions have not been publicly identified yet, but the Times, under criticism, stopped publication of all cartoons in the international edition to prevent more antisemitism from reaching its pages.",
           "next_sentence": "In response to all of this, the Zionist Organization of America (ZOA) has called for the Times to terminate Wright-Piersanti and then conduct an organization-wide audit to root out racism and antisemitism lurking within the newspaper."
         },
@@ -1619,7 +1619,7 @@
         {
           "sample_id": "entertainment_13_24",
           "target_sentence": "“Further, we urge the Times to conduct an internal editorial review of every piece of content that Wright-Piersanti has been involved in publishing during his five plus years with the Times, for antisemitic bias, and to take all necessary corrective actions regarding that content.”",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "“The Zionist Organization of America urges the New York Times to fire its Senior Staff Editor Tom Wright-Piersanti, in light of Wright-Piersanti’s antisemitic and racist tweets that were recently uncovered,” ZOA said in a statement on its website.",
           "next_sentence": "Katrina Pierson, a senior adviser to President Donald Trump’s campaign, added in a statement to Breitbart News that the Times should hire an outside counsel, an independent law firm, to conduct such a review into antisemitism and racism pervasive throughout the newspaper."
         },
@@ -1640,14 +1640,14 @@
         {
           "sample_id": "entertainment_13_27",
           "target_sentence": "Several current staffers at the New York Times, including multiple reporters, believe that Wright-Piersanti should be–and probably will be–fired.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "“Combined with other recent scandals like the publication of antisemitic cartoons and racist tweets that led to the demotion of another political editor in the Times’ newsroom, it is long past time for the New York Times to hire an independent outside counsel legal firm to conduct a thorough review of the newspaper’s entire staff, hiring practices, and all editorial processes,” Pierson told Breitbart News.",
           "next_sentence": "In conversations with Breitbart News over the past day-plus since this was exposed, during which all of the Times staffers requested anonymity, New York Times staffers described being caught flat-footed by these revelations."
         },
         {
           "sample_id": "entertainment_13_28",
           "target_sentence": "In conversations with Breitbart News over the past day-plus since this was exposed, during which all of the Times staffers requested anonymity, New York Times staffers described being caught flat-footed by these revelations.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "Several current staffers at the New York Times, including multiple reporters, believe that Wright-Piersanti should be–and probably will be–fired.",
           "next_sentence": "One said Wright-Piersanti would have been fired already had the Times leadership not wanted to hand a “win” to the many conservatives and Trump supporters calling for his termination, and others expressed fear that similar stories may come out about other Times employees or others in media."
         },
@@ -1675,21 +1675,21 @@
         {
           "sample_id": "entertainment_13_32",
           "target_sentence": "That story is forthcoming and likely to be published as soon as the newspaper figures out exactly how to handle the matter.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "In fact, the Times has even tasked some reporters with writing a story about what happened here and describing it in their own terms.",
           "next_sentence": "It may be an effort to control the narrative of firing Wright-Piersanti, if that is what the paper intends to do, and frame it in the best possible way for the Times so it does not have to address the broader culture of antisemitism and racism permeating the organization."
         },
         {
           "sample_id": "entertainment_13_33",
           "target_sentence": "It may be an effort to control the narrative of firing Wright-Piersanti, if that is what the paper intends to do, and frame it in the best possible way for the Times so it does not have to address the broader culture of antisemitism and racism permeating the organization.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "That story is forthcoming and likely to be published as soon as the newspaper figures out exactly how to handle the matter.",
           "next_sentence": "“We’re almost damned if we, damned if we don’t–in that if they fire him, the right will scream it is correct about the culture here having racial issues,” a Times staffer said."
         },
         {
           "sample_id": "entertainment_13_34",
           "target_sentence": "“We’re almost damned if we, damned if we don’t–in that if they fire him, the right will scream it is correct about the culture here having racial issues,” a Times staffer said.",
-          "label": "M",
+          "label": "C",
           "prev_sentence": "It may be an effort to control the narrative of firing Wright-Piersanti, if that is what the paper intends to do, and frame it in the best possible way for the Times so it does not have to address the broader culture of antisemitism and racism permeating the organization.",
           "next_sentence": "“If we don’t fire him, how can we avoid the accusation of hypocrisy?”"
         },
@@ -1765,7 +1765,7 @@
         {
           "sample_id": "entertainment_14_5",
           "target_sentence": "Hopkins’ opposition to that aspect of Sterling Bay’s plan means that the proposed entertainment district “will be eliminated from a revised plan and replaced by restaurants, theaters, and smaller venues that will be scattered throughout the site.”",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "In November, the Hideout and several other small music venues in Chicago said they were “banding together” in an effort to slow the project for fear it would starve them of talent and drive them out of business.",
           "next_sentence": "LiveNation “will have no ownership interest in any of these venues,” Hopkins said."
         },
@@ -1779,7 +1779,7 @@
         {
           "sample_id": "entertainment_14_7",
           "target_sentence": "The alderman said his decision to nix the two key elements stemmed from an avalanche of opposition to the stadium and entertainment district unleashed in a pair of neighborhood surveys and in emails, phone calls and testimony at jam-packed community hearings on the Lincoln Yards development.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "LiveNation “will have no ownership interest in any of these venues,” Hopkins said.",
           "next_sentence": "“The idea of 20,000 fans coming to an event, then leaving hours later creating massive traffic tie-ups throughout the community—not just on the Kennedy."
         },
@@ -1800,21 +1800,21 @@
         {
           "sample_id": "entertainment_14_10",
           "target_sentence": "“There would have been many other events besides soccer matches.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "All the arterial streets in the vicinity would have become gridlocked,” Hopkins said.",
           "next_sentence": "Concerts and other things."
         },
         {
           "sample_id": "entertainment_14_11",
           "target_sentence": "Concerts and other things.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "“There would have been many other events besides soccer matches.",
           "next_sentence": "In order to justify the cost of building such a structure, it became clear that it would need to be utilized somewhat regularly."
         },
         {
           "sample_id": "entertainment_14_12",
           "target_sentence": "In order to justify the cost of building such a structure, it became clear that it would need to be utilized somewhat regularly.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "Concerts and other things.",
           "next_sentence": "That just put an undue burden on the neighborhood."
         },
@@ -1828,7 +1828,7 @@
         {
           "sample_id": "entertainment_14_14",
           "target_sentence": "There didn’t seem to be a way to solve that.”",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "That just put an undue burden on the neighborhood.",
           "next_sentence": "The entertainment district raised similar concerns because of the size of the venues that would have been included, Hopkins said."
         },
@@ -1842,7 +1842,7 @@
         {
           "sample_id": "entertainment_14_16",
           "target_sentence": "“A 6,000-seat venue, a 5,000-seat venue and a 4,000-seat venue…That was over 10,000 right there in that same location.",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "The entertainment district raised similar concerns because of the size of the venues that would have been included, Hopkins said.",
           "next_sentence": "Same impact,” the alderman said."
         },
@@ -1856,7 +1856,7 @@
         {
           "sample_id": "entertainment_14_18",
           "target_sentence": "“In addition to that, the independent music scene in Chicago was very concerned that LiveNation was one of the owners of the district.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Same impact,” the alderman said.",
           "next_sentence": "They had an equity stake in it."
         },
@@ -1870,14 +1870,14 @@
         {
           "sample_id": "entertainment_14_20",
           "target_sentence": "They felt that would be unfair competition to the independent music venues.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "They had an equity stake in it.",
           "next_sentence": "By removing the entertainment district, that takes LiveNation’s equity stake out."
         },
         {
           "sample_id": "entertainment_14_21",
           "target_sentence": "By removing the entertainment district, that takes LiveNation’s equity stake out.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "They felt that would be unfair competition to the independent music venues.",
           "next_sentence": "That should satisfy concerns of the independent music promoters.”"
         },
@@ -1898,14 +1898,14 @@
         {
           "sample_id": "entertainment_14_24",
           "target_sentence": "Dennis Culloton, a spokesperson for the Ricketts family, said the family’s “potential involvement was focused on the soccer team and contingent on city approvals.”",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "The proposed stadium would have been home to a United Soccer League franchise owned by Cubs chairman Tom Ricketts, though it would also have hosted other community and sporting events.",
           "next_sentence": "“While we are disappointed the concept is no longer included in the master plan, we understand the ambitious Lincoln Yards project needs to move forward,” Culloton said in a statement."
         },
         {
           "sample_id": "entertainment_14_25",
           "target_sentence": "“While we are disappointed the concept is no longer included in the master plan, we understand the ambitious Lincoln Yards project needs to move forward,” Culloton said in a statement.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "Dennis Culloton, a spokesperson for the Ricketts family, said the family’s “potential involvement was focused on the soccer team and contingent on city approvals.”",
           "next_sentence": "Andy Gloor, managing principal of Sterling Bay, could not be reached."
         },
@@ -1926,14 +1926,14 @@
         {
           "sample_id": "entertainment_14_28",
           "target_sentence": "“Alderman Hopkins and residents have been very clear: they do not want a stadium.",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "In a statement, Sterling Bay accepted Hopkins’ stand as the final verdict.",
           "next_sentence": "And we want to say: we heard you loud and clear,” the statement said."
         },
         {
           "sample_id": "entertainment_14_29",
           "target_sentence": "And we want to say: we heard you loud and clear,” the statement said.",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "“Alderman Hopkins and residents have been very clear: they do not want a stadium.",
           "next_sentence": "“We have removed the stadium and broken up the entertainment district, allowing for assorted smaller venues throughout Lincoln Yards where all independent music operators will have the opportunity to participate."
         },
@@ -1947,7 +1947,7 @@
         {
           "sample_id": "entertainment_14_31",
           "target_sentence": "We have also heard the desire for improved transit and infrastructure in the area, a desire we share.”",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "“We have removed the stadium and broken up the entertainment district, allowing for assorted smaller venues throughout Lincoln Yards where all independent music operators will have the opportunity to participate.",
           "next_sentence": "Under the developer’s revised plan, the proposed Concord/Wisconsin Bridge will now be for both vehicular and pedestrian access, the statement said."
         },
@@ -1961,7 +1961,7 @@
         {
           "sample_id": "entertainment_14_33",
           "target_sentence": "“This bridge, along with the renovated Cortland Bridge, new Armitage bridge, new Dominick bridge, and extended 606, creates five viable routes across the Chicago River,” the developer said.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "Under the developer’s revised plan, the proposed Concord/Wisconsin Bridge will now be for both vehicular and pedestrian access, the statement said.",
           "next_sentence": "“Further, Alderman Hopkins has received a commitment from CDOT that they will swiftly pursue the realignment of Elston/Armitage/Ashland.”"
         },
@@ -1975,7 +1975,7 @@
         {
           "sample_id": "entertainment_14_35",
           "target_sentence": "Hopkins’s stand appears to remove at least one obstacle to Mayor Rahm Emanuel’s plan to convince the City Council to approve $1.7 billion in tax-increment-financing (TIF) subsidies to unlock the development potential of four mega-sites in and around the downtown area.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "“Further, Alderman Hopkins has received a commitment from CDOT that they will swiftly pursue the realignment of Elston/Armitage/Ashland.”",
           "next_sentence": "The largest subsidy — up to $800 million — would be earmarked for Lincoln Yards."
         },
@@ -2003,7 +2003,7 @@
         {
           "sample_id": "entertainment_14_39",
           "target_sentence": "“The main direction from the mayor on this is, find that balance that is fair overall…This is a step toward achieving that balance…This opens up a path to a level of compromise to move the project forward.”",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "“The project has the ability to be extremely successful without a large stadium and without an entertainment district…There’s a path to make this work with the kind of limited venue approach the alderman referenced,” said Planning and Development Commissioner David Reifman.",
           "next_sentence": null
         }
@@ -2044,7 +2044,7 @@
         {
           "sample_id": "entertainment_15_5",
           "target_sentence": "it becomes the highest first-week earner for february  outshining my big fat greek wedding which sold four million units in 2003. films which are expected to earn strong home video returns are usually timed for release in the busiest retail season which falls before christmas.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "the all-time first-week record is held by 1995 s lion king followed by shrek 2  finding nemo  the original shrek  and monster s inc.  shark tale  whose voice cast includes will smith  robert de niro  renee zellweger and martin scorsese  sold more than 6 million dvds and videos across the united states and canada.",
           "next_sentence": "the best-selling home video of last year was the dreamworks hit shrek 2  which took an estimated $458 m (£242.7m) in north america alone."
         },
@@ -2189,7 +2189,7 @@
         {
           "sample_id": "entertainment_17_5",
           "target_sentence": "following the fascination with the writing of salam pax - not his real name - he began a regular column in the guardian newspaper and was given a crash course in documentary film-making.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "baghdad blogger is among a number of films about iraq showcased at the dutch festival  which runs until sunday.",
           "next_sentence": "for the film he travelled iraq to document the changing landscape of the country and the problems it has faced since the invasion  speaking to ordinary iraqis about their experiences."
         },
@@ -2224,7 +2224,7 @@
         {
           "sample_id": "entertainment_17_10",
           "target_sentence": "rasheed said the title was refers to the isolation felt by iraqis under saddam s regime and the difficult time the country is now experiencing.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "it centres on the lives of families and strangers going about their everyday business as baghdad is under siege.",
           "next_sentence": "saddam s regime was hell  but now i think the hell has doubled   rasheed said."
         },
@@ -2293,7 +2293,7 @@
         {
           "sample_id": "entertainment_18_6",
           "target_sentence": "tarantino is said to be intrigued by the prospect of building a new film around one of the horror genre s most recognised figures.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "according to the industry newspaper  new line had been trying to make another sequel involving ash  the hero of the evil dead movies  but was unable to agree terms with director sam raimi.",
           "next_sentence": "first  however  he is scheduled to direct the season finale of us television series csi: crime scene investigation."
         },
@@ -2355,7 +2355,7 @@
         {
           "sample_id": "entertainment_19_6",
           "target_sentence": "The ratings also seemed to justify decisions made in network executive suites about coverage of the impeachment vote.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "There was no reliable number immediately for daytime coverage.",
           "next_sentence": "Both CBS and ABC left the debate to air entertainment coverage, while NBC stuck with the news."
         },
@@ -2397,14 +2397,14 @@
         {
           "sample_id": "entertainment_19_12",
           "target_sentence": "The one-word headline “Impeached” dominated the Anchorage Daily News in Alaska, the Arizona Republic, the Boston Globe and the Baltimore Sun.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "A review of newspaper front pages across the country showed banner headlines for the impeachment story virtually everywhere.",
           "next_sentence": "The handful of newspapers that didn't lead with the story were ones that appeared to focus almost solely on local news up front."
         },
         {
           "sample_id": "entertainment_19_13",
           "target_sentence": "The handful of newspapers that didn't lead with the story were ones that appeared to focus almost solely on local news up front.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "The one-word headline “Impeached” dominated the Anchorage Daily News in Alaska, the Arizona Republic, the Boston Globe and the Baltimore Sun.",
           "next_sentence": "The Clarion-Ledger in Biloxi, Mississippi, for example, led with the death of a Domino's Pizza delivery person."
         },
@@ -2418,7 +2418,7 @@
         {
           "sample_id": "entertainment_19_15",
           "target_sentence": "In Battle Creek, Michigan, where Trump spoke at a rally Thursday night, the front page headline was “Trump Comes to Battle Creek.”",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "The Clarion-Ledger in Biloxi, Mississippi, for example, led with the death of a Domino's Pizza delivery person.",
           "next_sentence": "The impeachment story was bumped to page 8-A."
         },
@@ -2432,7 +2432,7 @@
         {
           "sample_id": "entertainment_19_17",
           "target_sentence": "The New York Post, owned by conservative media tycoon Rupert Murdoch, featured a picture of House Speaker Nancy Pelosi and the headline “It's Your Funeral.”",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "The impeachment story was bumped to page 8-A.",
           "next_sentence": "The secondary headline was “Swamp mistress Pelosi dresses in black for historic vote.”"
         },
@@ -2452,7 +2452,7 @@
         {
           "sample_id": "entertainment_20_1",
           "target_sentence": "dvd review: i  robot only one man recognises that robots are a threat to humanity - but that s fine because it only takes one man to save the day in the thriller i  robot.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": null,
           "next_sentence": "will smith co-stars alongside more cgi robots than you can count and as a thrill-a-minute kind of action film  it s perfectly adequate."
         },
@@ -2480,14 +2480,14 @@
         {
           "sample_id": "entertainment_20_5",
           "target_sentence": "unusually for this kind of film  the extras don t solely concentrate on the special effects.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "there is a one-disc version that has commentaries and a making of but the two-disc adds more.",
           "next_sentence": "they re covered but there s also a general production diary and a post-production feature."
         },
         {
           "sample_id": "entertainment_20_6",
           "target_sentence": "they re covered but there s also a general production diary and a post-production feature.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "unusually for this kind of film  the extras don t solely concentrate on the special effects.",
           "next_sentence": "remember the national lottery s draw machines arthur and guinevere  they were more accurate than this glossy hollywood version of the tale."
         },
@@ -2508,14 +2508,14 @@
         {
           "sample_id": "entertainment_20_9",
           "target_sentence": "clive owen is the brooding king  keira knightly rises above her costume and ray winstone gives it all some grit.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "but as long as you re not expecting a documentary  live with it: king arthur is a fun  exciting  totally shallow experience and looks excellent.",
           "next_sentence": "it s at its best in its battle scenes which are well done and are also the best part of the making of extra."
         },
         {
           "sample_id": "entertainment_20_10",
           "target_sentence": "it s at its best in its battle scenes which are well done and are also the best part of the making of extra.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "clive owen is the brooding king  keira knightly rises above her costume and ray winstone gives it all some grit.",
           "next_sentence": "less flashy than a david attenborough show and less detailed than a simon schama one  the bbc series british isles nevertheless turned out to be quite engrossing."
         },
@@ -2536,7 +2536,7 @@
         {
           "sample_id": "entertainment_20_13",
           "target_sentence": "but titchmarsh turns out to know his subject and the sight of our present-day landscape being peeled back to reveal the past was fascinating.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "admit it  the fact that this is one of the shows alan titchmarsh left ground force to present did mean that you expected something equally frothy.",
           "next_sentence": "he s now written an accompanying book  too."
         },
@@ -2563,7 +2563,7 @@
         {
           "sample_id": "entertainment_21_2",
           "target_sentence": "The Japanese word used to refer to comics or cartoons, manga originally translates as “pictures run riot”.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "The world’s largest exhibition of manga outside of Japan is set to open at the British Museum in London later this week.",
           "next_sentence": "It has been popular in its homeland for nearly 200 years but enjoyed global success in recent decades."
         },
@@ -2577,7 +2577,7 @@
         {
           "sample_id": "entertainment_21_4",
           "target_sentence": "From its beginning with 19th century Japanese artist Hokusai - best known for his work The Great Wave - the London exhibition will span manga’s varied history and look at the different techniques of design and narrative that drive its works.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "It has been popular in its homeland for nearly 200 years but enjoyed global success in recent decades.",
           "next_sentence": "Its influence over anime and video games - not least the Pokemon phenomenon – will also be explored."
         },
@@ -2632,7 +2632,7 @@
         {
           "sample_id": "entertainment_22_5",
           "target_sentence": "as far as content is concerned  i will talk about the movies.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "i ve been on tv and been funny not cursing   he said during an interview for cbs network s 60 minutes show.",
           "next_sentence": "i m sure abc might be more worried about it than me   he added."
         },
@@ -2646,7 +2646,7 @@
         {
           "sample_id": "entertainment_22_7",
           "target_sentence": "the 40-year-old comedian caused a furore when he said in an interview with us magazine entertainment weekly recently that he hardly ever watched the oscars and labelled awards ceremonies  idiotic .",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "i m sure abc might be more worried about it than me   he added.",
           "next_sentence": "the show s producers defended rock and confirmed that he would still be presenting the oscar ceremony  saying his comments were  humorous digs ."
         },
@@ -2701,7 +2701,7 @@
         {
           "sample_id": "entertainment_23_4",
           "target_sentence": "suddenly  when raw t came into my life  i realised they are my third major band   he told bbc world service s the music biz programme.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "now wilson believes rap act raw t - signed to his f4 label  the fourth incarnation of factory - will  complete the hat-trick .",
           "next_sentence": "the group are set to release their first single on 21 february  and follow it up with an album  realise and witness  in march."
         },
@@ -2736,7 +2736,7 @@
         {
           "sample_id": "entertainment_23_9",
           "target_sentence": "wilson explained how his son persuaded him to go and see raw t  but he had initially been reluctant saying he  detested  young british people rapping.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "the idea of working with brilliant young musicians  and being close to the centre of popular culture  is just the biggest thrill in my life.",
           "next_sentence": "it s always inauthentic  it s always crass  it never really works for me   he said."
         },
@@ -2750,14 +2750,14 @@
         {
           "sample_id": "entertainment_23_11",
           "target_sentence": "i went to see this group  raw t - which stands for realise and witness talent - and like everyone else in the room that night  we were utterly blown away.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "it s always inauthentic  it s always crass  it never really works for me   he said.",
           "next_sentence": "wilson believes raw t could be  to f4 as joy division were to factory records ."
         },
         {
           "sample_id": "entertainment_23_12",
           "target_sentence": "wilson believes raw t could be  to f4 as joy division were to factory records .",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "i went to see this group  raw t - which stands for realise and witness talent - and like everyone else in the room that night  we were utterly blown away.",
           "next_sentence": "the story of factory records - which also owned the legendary hacienda club in manchester - was told in the michael winterbottom film 24 hour party people  in which wilson was played by steve coogan."
         },
@@ -2771,28 +2771,28 @@
         {
           "sample_id": "entertainment_23_14",
           "target_sentence": "wilson stressed that the independent music scene remained  as important  as it had been during the 1980s  when labels such as factory and rough trade proliferated.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "the story of factory records - which also owned the legendary hacienda club in manchester - was told in the michael winterbottom film 24 hour party people  in which wilson was played by steve coogan.",
           "next_sentence": "he pointed out that franz ferdinand and the white stripes -  perhaps the two most important bands since the millennium  - were signed to indies."
         },
         {
           "sample_id": "entertainment_23_15",
           "target_sentence": "he pointed out that franz ferdinand and the white stripes -  perhaps the two most important bands since the millennium  - were signed to indies.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "wilson stressed that the independent music scene remained  as important  as it had been during the 1980s  when labels such as factory and rough trade proliferated.",
           "next_sentence": "i think that is a reflection of how useful and how powerful the indie philosophy is  and how bands prefer it   he added."
         },
         {
           "sample_id": "entertainment_23_16",
           "target_sentence": "i think that is a reflection of how useful and how powerful the indie philosophy is  and how bands prefer it   he added.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "he pointed out that franz ferdinand and the white stripes -  perhaps the two most important bands since the millennium  - were signed to indies.",
           "next_sentence": "they can make more money that way - it s a more generous relationship  and also it s a more understanding relationship."
         },
         {
           "sample_id": "entertainment_23_17",
           "target_sentence": "they can make more money that way - it s a more generous relationship  and also it s a more understanding relationship.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "i think that is a reflection of how useful and how powerful the indie philosophy is  and how bands prefer it   he added.",
           "next_sentence": "i think independents are in a wonderful position at this moment in time."
         },
@@ -2909,7 +2909,7 @@
         {
           "sample_id": "entertainment_25_9",
           "target_sentence": "with queues outside the venue long and expectations high  the pressure was on fightstar to impress.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "mike eccleshall  the venue s promotions coordinator  said:  tickets had been selling strongly over the past few days  but sales went mad after the news broke.",
           "next_sentence": "although many dedicated fans travelled to the gig from around the country  they faced a tough crowd made up chiefly of students  the average age of the audience far exceeding that of any busted concert."
         },
@@ -2937,14 +2937,14 @@
         {
           "sample_id": "entertainment_25_13",
           "target_sentence": "when fightstar eventually took to the stage around 11pm  however  a riotous cheer easily drowned out any hecklers lurking in the crowd.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "support act brigade  fronted by simpson s brother  played a short set first and were met with general approval.",
           "next_sentence": "unfortunately  the band were initially hindered by technical teething problems as simpson s guitar amplifier failed to work."
         },
         {
           "sample_id": "entertainment_25_14",
           "target_sentence": "unfortunately  the band were initially hindered by technical teething problems as simpson s guitar amplifier failed to work.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "when fightstar eventually took to the stage around 11pm  however  a riotous cheer easily drowned out any hecklers lurking in the crowd.",
           "next_sentence": "as sound technicians rushed to fix it  other band members did their best to improvise."
         },
@@ -2958,35 +2958,35 @@
         {
           "sample_id": "entertainment_25_16",
           "target_sentence": "when they eventually got under way  fightstar s blend of emotionally charged rock was warmly received.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "as sound technicians rushed to fix it  other band members did their best to improvise.",
           "next_sentence": "far heavier and less commercial than busted s chart-topping pop-punk  the band will undoubtedly appeal to a more mature fan-base."
         },
         {
           "sample_id": "entertainment_25_17",
           "target_sentence": "far heavier and less commercial than busted s chart-topping pop-punk  the band will undoubtedly appeal to a more mature fan-base.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "when they eventually got under way  fightstar s blend of emotionally charged rock was warmly received.",
           "next_sentence": "warwick student helen clutterbuck admitted:  i came to check out fightstar because of all the controversy."
         },
         {
           "sample_id": "entertainment_25_18",
           "target_sentence": "warwick student helen clutterbuck admitted:  i came to check out fightstar because of all the controversy.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "far heavier and less commercial than busted s chart-topping pop-punk  the band will undoubtedly appeal to a more mature fan-base.",
           "next_sentence": "i ve never heard them before  but i m pretty impressed."
         },
         {
           "sample_id": "entertainment_25_19",
           "target_sentence": "i ve never heard them before  but i m pretty impressed.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "warwick student helen clutterbuck admitted:  i came to check out fightstar because of all the controversy.",
           "next_sentence": "less impressed were fellow students ryan crabbe and gordon rennie  who observed   with fightstar  charlie has clearly progressed from busted s sound  but they re still not very inspiring."
         },
         {
           "sample_id": "entertainment_25_20",
           "target_sentence": "less impressed were fellow students ryan crabbe and gordon rennie  who observed   with fightstar  charlie has clearly progressed from busted s sound  but they re still not very inspiring.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "i ve never heard them before  but i m pretty impressed.",
           "next_sentence": "fightstar played for around 45 minutes  showcasing material from their forthcoming ep called they liked you better when you were dead  due for release in february."
         },
@@ -3027,14 +3027,14 @@
         {
           "sample_id": "entertainment_26_4",
           "target_sentence": "FOLLOW THE HERLAND REPORT NEWS SITE and pick up articles from leading intellectuals, authors, journalists and activists: VIDEO William Binney says: “The media is totally infiltrated by the CIA and various other agencies.",
-          "label": "M",
+          "label": "C",
           "prev_sentence": "Binney, who uncovered and warned of the mass surveillance done out of the NSA post 9/11, speaks to The Herland Report in an exclusive interview.",
           "next_sentence": "When it comes to national security, the media only talk about what the administration wants you to hear, and basically suppress any other statements about what’s going on that the administration does not want get public."
         },
         {
           "sample_id": "entertainment_26_5",
           "target_sentence": "When it comes to national security, the media only talk about what the administration wants you to hear, and basically suppress any other statements about what’s going on that the administration does not want get public.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "FOLLOW THE HERLAND REPORT NEWS SITE and pick up articles from leading intellectuals, authors, journalists and activists: VIDEO William Binney says: “The media is totally infiltrated by the CIA and various other agencies.",
           "next_sentence": "The media is basically the lapdogs for the government.”"
         },
@@ -3111,28 +3111,28 @@
         {
           "sample_id": "entertainment_26_16",
           "target_sentence": "In this country, democracy has been subverted, much I think by Dick Cheney.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "“We are pretty much heading towards a totalitarian system.",
           "next_sentence": "He masterminded this because he would spend time in Congress, he knew about the congressional operation, how it worked."
         },
         {
           "sample_id": "entertainment_26_17",
           "target_sentence": "He masterminded this because he would spend time in Congress, he knew about the congressional operation, how it worked.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "In this country, democracy has been subverted, much I think by Dick Cheney.",
           "next_sentence": "He was assistant to President Nixon, spying on everybody."
         },
         {
           "sample_id": "entertainment_26_18",
           "target_sentence": "He was assistant to President Nixon, spying on everybody.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "He masterminded this because he would spend time in Congress, he knew about the congressional operation, how it worked.",
           "next_sentence": "He knew that he needed to know things about people in the opposition."
         },
         {
           "sample_id": "entertainment_26_19",
           "target_sentence": "He knew that he needed to know things about people in the opposition.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "He was assistant to President Nixon, spying on everybody.",
           "next_sentence": "What better way to do it than have a sister agency and the US government just open up and collect everything, store it, so you can go in and look at it at any time retroactively and examine anybody.”"
         },
@@ -3153,7 +3153,7 @@
         {
           "sample_id": "entertainment_26_22",
           "target_sentence": "The Herland Report is founded and hosted by Hanne Nabintu Herland, a historian of comparative religions, bestselling author, commentator and TV producer, known from the media for sharp analysis and fearless speech. from -infiltrated-by-cia-william-binney/",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "The Herland Report is a Scandinavian news site < and TV channel on YouTube < reaching millions yearly, presenting leading intellectuals’ view on foreign policy, current affairs, the Middle East, Western decadence, featuring a variety of opinion and analysis from a number of commentators from across the political spectrum.",
           "next_sentence": null
         }
@@ -3187,7 +3187,7 @@
         {
           "sample_id": "entertainment_27_4",
           "target_sentence": "Earlier this month, the former leader of the band, CL, officially parted ways with YG Entertainment and made her own YouTube channel with Dara's support on Instagram, asking fans to subscribe. ​2NE1 was a South Korean girl group composed of Bom, CL, Dara, and Minzy, formed by YG Entertainment in 2009. 2NE1 was one of the most popular and selling girl groups in South Korea - and of all time.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "The singer replied herself from her official account that it is not true.",
           "next_sentence": "Billboard magazine ranked 2NE1 as one of the best K-pop girl groups of the past decade."
         },
@@ -3208,7 +3208,7 @@
         {
           "sample_id": "entertainment_27_7",
           "target_sentence": "Not only has she had an impact on music over the course of the past decade, but she is also considered to be the woman with the most iconic and memorable styles in the Korean music industry.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "Sandara Park, known as Dara, is a South Korean singer, actress, and MC, as well as an ex-member of 2NE1.",
           "next_sentence": null
         }
@@ -3242,7 +3242,7 @@
         {
           "sample_id": "entertainment_28_4",
           "target_sentence": "Debate over where the sculptures should be located has raged for more than 200 years, with Labour leader Jeremy Corbyn pledging to return them to Greece if he becomes prime minister.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "Lord Elgin sold the marbles to the British government, who passed them on to the British Museum in 1817 where they remain one of its most prized exhibits.",
           "next_sentence": "In August, Greek culture minister Lydia Koniordou invited UK officials to meetings in Greece to discuss the statues’ return in the midst of Brexit talks as Britain sought allies around Europe."
         },
@@ -3256,7 +3256,7 @@
         {
           "sample_id": "entertainment_28_6",
           "target_sentence": "In an interview with Ta Nea, Greece’s daily newspaper, British Museum director Hartwig Fischer said: “The Trustees of the British Museum feel the obligation to preserve the collection in its entirety, so that things that are part of this collection remain part of this collection.”",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "In August, Greek culture minister Lydia Koniordou invited UK officials to meetings in Greece to discuss the statues’ return in the midst of Brexit talks as Britain sought allies around Europe.",
           "next_sentence": "Asked if he thinks the Greek people are right to want the Parthenon sculptures back, he told the newspaper: “I can certainly understand that the Greeks have a special and passionate relationship with this part of their cultural heritage."
         },
@@ -3291,7 +3291,7 @@
         {
           "sample_id": "entertainment_28_11",
           "target_sentence": "Supporters of the Greek position say although Lord Elgin said he had the permission of officials of the ruling Ottoman Empire to take the sculptures, the empire was a foreign force and had no right to let the artefacts go.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "For several decades, Greece has called for the reunification of the statues and has sent several formal requests, threatened legal action and proposed solutions such as mediation by Unesco.",
           "next_sentence": "When Mr Fischer was asked about Mr Corbyn’s pledge to return the Elgin Marbles to Greece if he became prime minister, he said: “I think that this is Mr Corbyn’s personal view on the question, that you take note of."
         },
@@ -3326,7 +3326,7 @@
         {
           "sample_id": "entertainment_28_16",
           "target_sentence": "Defenders of keeping the statues in Britain have argued returning them would pave the way for requests from other coutries for items in British museums to be returned.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "The objects that are part of the collection of the British Museum are in the fiduciary ownership of the Trustees of the Museum.”",
           "next_sentence": "In a statement, the British Museum said: “Hartwig Fischer was stating the long-standing position of the British Museum."
         },
@@ -3423,7 +3423,7 @@
         {
           "sample_id": "entertainment_29_9",
           "target_sentence": "last may  r&b star usher scored a chart first  with three concurrent singles in the us top 10  a feat which was previously matched only by the bee gees and the beatles.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "newcomer the game s debut reached the top of the charts five weeks ago  while 50 cent s second collection the masscre was released in the us at the end of last week.",
           "next_sentence": "the hit songs were taken from the 24-year-old s confessions album  which topped the american chart for eight weeks."
         },
@@ -3478,7 +3478,7 @@
         {
           "sample_id": "entertainment_30_6",
           "target_sentence": "The ratings also seemed to justify decisions made in network executive suites about coverage of the impeachment vote.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "There was no reliable number immediately for daytime coverage.",
           "next_sentence": "Both CBS and ABC left the debate to air entertainment coverage, while NBC stuck with the news."
         },
@@ -3520,14 +3520,14 @@
         {
           "sample_id": "entertainment_30_12",
           "target_sentence": "The one-word headline “Impeached” dominated the Anchorage Daily News in Alaska, the Arizona Republic, the Boston Globe and the Baltimore Sun.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "A review of newspaper front pages across the country showed banner headlines for the impeachment story virtually everywhere.",
           "next_sentence": "The handful of newspapers that didn't lead with the story were ones that appeared to focus almost solely on local news up front."
         },
         {
           "sample_id": "entertainment_30_13",
           "target_sentence": "The handful of newspapers that didn't lead with the story were ones that appeared to focus almost solely on local news up front.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "The one-word headline “Impeached” dominated the Anchorage Daily News in Alaska, the Arizona Republic, the Boston Globe and the Baltimore Sun.",
           "next_sentence": "The Clarion-Ledger in Biloxi, Mississippi, for example, led with the death of a Domino's Pizza delivery person."
         },
@@ -3541,7 +3541,7 @@
         {
           "sample_id": "entertainment_30_15",
           "target_sentence": "In Battle Creek, Michigan, where Trump spoke at a rally Thursday night, the front page headline was “Trump Comes to Battle Creek.”",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "The Clarion-Ledger in Biloxi, Mississippi, for example, led with the death of a Domino's Pizza delivery person.",
           "next_sentence": "The impeachment story was bumped to page 8-A."
         },
@@ -3562,7 +3562,7 @@
         {
           "sample_id": "entertainment_30_18",
           "target_sentence": "The secondary headline was “Swamp mistress Pelosi dresses in black for historic vote.”",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "The New York Post, owned by conservative media tycoon Rupert Murdoch, featured a picture of House Speaker Nancy Pelosi and the headline “It's Your Funeral.”",
           "next_sentence": null
         }
@@ -3589,7 +3589,7 @@
         {
           "sample_id": "entertainment_31_3",
           "target_sentence": "Making the announcement on the Radio 1 Breakfast Show, Greg James said: \"I can't wait to take some of the best acts on the planet to Middlesbrough.\"",
-          "label": "M",
+          "label": "C",
           "prev_sentence": "The music festival will take place at Stewart Park and will also feature performances from Zara Larsson, Mabel and Khalid.",
           "next_sentence": "Big Weekend will be on 25 and 26 May."
         },
@@ -3603,7 +3603,7 @@
         {
           "sample_id": "entertainment_31_5",
           "target_sentence": "Little Mix say they are \"so excited\" to perform at the event, now in its 16th year.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "Big Weekend will be on 25 and 26 May.",
           "next_sentence": "It'll be the fourth time The 1975, who won two Brit Awards last week, have played Big Weekend but they said it's \"great to be coming back, this time as headliners\"."
         },
@@ -3631,7 +3631,7 @@
         {
           "sample_id": "entertainment_31_9",
           "target_sentence": "Listen to Newsbeat live at 12:45 and 17:45 every weekday on BBC Radio 1 and 1Xtra - if you miss us you can listen back here.",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "More information on how to get tickets will be released in the coming weeks.",
           "next_sentence": null
         }
@@ -3665,7 +3665,7 @@
         {
           "sample_id": "entertainment_32_4",
           "target_sentence": "The Mail on Sunday repeated its intent to defend the case \"with vigour\".",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "Her lawyers claim the Mail on Sunday removed passages of a private letter to her father to portray her \"negatively\".",
           "next_sentence": "\"There is nothing in this document which changes that position,\" a spokesman said."
         },
@@ -3693,21 +3693,21 @@
         {
           "sample_id": "entertainment_32_8",
           "target_sentence": "It is claimed the newspaper did not publish parts of the letter because it would undermine its \"negative\" portrayal of the duchess.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "The claim came after the Mail on Sunday published a handwritten letter from Meghan to her father, Thomas Markle, sent shortly after she and Prince Harry got married in 2018.",
           "next_sentence": "The court papers claim that Meghan's father was exploited by journalists and say that reporters also invented a series of claims about her relationship with her mother."
         },
         {
           "sample_id": "entertainment_32_9",
           "target_sentence": "The court papers claim that Meghan's father was exploited by journalists and say that reporters also invented a series of claims about her relationship with her mother.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "It is claimed the newspaper did not publish parts of the letter because it would undermine its \"negative\" portrayal of the duchess.",
           "next_sentence": "The duchess' lawyers will also accuse the Mail on Sunday's sister title the Daily Mail of printing \"completely untrue\" stories about renovations to Meghan and Prince Harry's home."
         },
         {
           "sample_id": "entertainment_32_10",
           "target_sentence": "The duchess' lawyers will also accuse the Mail on Sunday's sister title the Daily Mail of printing \"completely untrue\" stories about renovations to Meghan and Prince Harry's home.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "The court papers claim that Meghan's father was exploited by journalists and say that reporters also invented a series of claims about her relationship with her mother.",
           "next_sentence": "They say that claims by the paper - also published on the Mail Online website - that a £5,000 copper bath and £500,000-worth of soundproofing were charged to the taxpayer were lies."
         },
@@ -3755,14 +3755,14 @@
         {
           "sample_id": "entertainment_33_2",
           "target_sentence": "In spite of ongoing radiological contamination that will continue to spread and threaten human health for lifetimes to come, other stories dominate the international news cycle.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "The following is a transcript of the 8th anniversary Fukushima, with an interview between Global Research host Michael Welsh and Dr. Helen Caldicott, first published on March 21, 2019 The eight year anniversary of the triple meltdowns at the Fukushima Daiichi nuclear facility passed mostly without comment in mainstream media circles.",
           "next_sentence": "The climate change conundrum, serious though it may be, seemingly crowds out all other clear and present environmental hazards."
         },
         {
           "sample_id": "entertainment_33_3",
           "target_sentence": "The climate change conundrum, serious though it may be, seemingly crowds out all other clear and present environmental hazards.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "In spite of ongoing radiological contamination that will continue to spread and threaten human health for lifetimes to come, other stories dominate the international news cycle.",
           "next_sentence": "As part of efforts to normalize this historic event and cover it up in its magnitude, the Japanese government has invested considerable financial, public relations and other resources into what they are billing the ‘Recovery Olympics‘ set to take place in a year’s time in Tokyo."
         },
@@ -3776,7 +3776,7 @@
         {
           "sample_id": "entertainment_33_5",
           "target_sentence": "But Helen Caldicott warns that the dangers associated with Fukushima have not gone away and remain a cause for concern.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "As part of efforts to normalize this historic event and cover it up in its magnitude, the Japanese government has invested considerable financial, public relations and other resources into what they are billing the ‘Recovery Olympics‘ set to take place in a year’s time in Tokyo.",
           "next_sentence": "Dr. Helen Caldicott has been an author, physician and one of the world’s leading anti-nuclear campaigners."
         },
@@ -3832,14 +3832,14 @@
         {
           "sample_id": "entertainment_33_13",
           "target_sentence": "I was hoping you could update our listenership on what is currently being recognized as the main health threats in 2019, perhaps not registered in the book, that you’re currently looking at in relation to the Fukushima meltdown.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Now it’s been more than four years since that book came out.",
           "next_sentence": "Helen Caldicott: Well it’s difficult because the Japanese government has authorized really only examination of thyroid cancer."
         },
         {
           "sample_id": "entertainment_33_14",
           "target_sentence": "Helen Caldicott: Well it’s difficult because the Japanese government has authorized really only examination of thyroid cancer.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "I was hoping you could update our listenership on what is currently being recognized as the main health threats in 2019, perhaps not registered in the book, that you’re currently looking at in relation to the Fukushima meltdown.",
           "next_sentence": "Now thyroid cancer is caused by radioactive iodine and there were many, many cases of that after Chernobyl."
         },
@@ -3909,7 +3909,7 @@
         {
           "sample_id": "entertainment_33_24",
           "target_sentence": "They’re not looking for leukemia.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Leukemia appears about 5 to 10 years later.",
           "next_sentence": "Solid cancers of every organ, or any organ as such appear about 15 years later and continue and in fact the Hibakusha from the Hiroshima and Nagasaki who are still alive are still developing cancers in higher than normal numbers."
         },
@@ -3944,7 +3944,7 @@
         {
           "sample_id": "entertainment_33_29",
           "target_sentence": "I have been to Japan twice and particularly to Fukushima and spoken to people there and the parents are desperate to hear the truth even if it’s not good truth.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "So there’s a huge, huge cover up.",
           "next_sentence": "And they thanked me for telling them the truth."
         },
@@ -3993,7 +3993,7 @@
         {
           "sample_id": "entertainment_33_36",
           "target_sentence": "And that water, of course, is extremely contaminated.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "Water is pumped consistently every day, every hour, to keep the cores cool in case they have another melt.",
           "next_sentence": "Now they say they’ve filtered out the contaminants except for the tritium which is part of the water molecule, but they haven’t."
         },
@@ -4014,7 +4014,7 @@
         {
           "sample_id": "entertainment_33_39",
           "target_sentence": "The fish already being caught off Fukushima, some are obviously contaminated.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "There’s strontium, cesium, and many other elements in that water – it’s highly radioactive – and because there isn’t enough room to build more tanks, they’re talking about emptying all that water into the Pacific Ocean and the fishermen are very, very upset.",
           "next_sentence": "But this will be a disaster."
         },
@@ -4042,7 +4042,7 @@
         {
           "sample_id": "entertainment_33_43",
           "target_sentence": "But now the three molten cores in contact with that water flowing under the reactors and so the water flowing into the Pacific is very radioactive and that’s a separate thing from the million gallons or more in those tanks.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "And when the reactors were in good shape, the water was fine, didn’t get contaminated.",
           "next_sentence": "They put up a refrigerated wall of frozen dirt around the reactors to prevent that water from the mountains flowing underneath the reactors, which has cut down the amount of water flowing per day from 500 tons to about a hundred and fifty."
         },
@@ -4056,14 +4056,14 @@
         {
           "sample_id": "entertainment_33_45",
           "target_sentence": "But of course, if they lose electricity, that refrigeration system is going to fail, and it’s a transient thing anyway so it’s ridiculous.",
-          "label": "M",
+          "label": "C",
           "prev_sentence": "They put up a refrigerated wall of frozen dirt around the reactors to prevent that water from the mountains flowing underneath the reactors, which has cut down the amount of water flowing per day from 500 tons to about a hundred and fifty.",
           "next_sentence": "In terms… So over time the Pacific is going to become more and more radioactive."
         },
         {
           "sample_id": "entertainment_33_46",
           "target_sentence": "In terms… So over time the Pacific is going to become more and more radioactive.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "But of course, if they lose electricity, that refrigeration system is going to fail, and it’s a transient thing anyway so it’s ridiculous.",
           "next_sentence": "They talk about decommissioning and removing those molten cores."
         },
@@ -4077,14 +4077,14 @@
         {
           "sample_id": "entertainment_33_48",
           "target_sentence": "When robots go in and try and have a look at them, their wiring just melts and disappears.",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "They talk about decommissioning and removing those molten cores.",
           "next_sentence": "They’re extraordinarily radioactive."
         },
         {
           "sample_id": "entertainment_33_49",
           "target_sentence": "They’re extraordinarily radioactive.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "When robots go in and try and have a look at them, their wiring just melts and disappears.",
           "next_sentence": "No human can go near them because they would die within 48 hours from the radiation exposure."
         },
@@ -4119,7 +4119,7 @@
         {
           "sample_id": "entertainment_33_54",
           "target_sentence": "GR: Do we have a better reading on, for example the thyroids, but also leukemia incubation— HC: No they’re not looking–well, leukemia they’re not looking for leukemia… HC: They’re not charting it.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "And so, the truth be known, it’s an ongoing global radiological catastrophe which no one really is addressing in full.",
           "next_sentence": "So the only cancer they’re looking at is thyroid cancer and that’s really high, and you know it’s at 201 have already been diagnosed and some have metastasized."
         },
@@ -4133,7 +4133,7 @@
         {
           "sample_id": "entertainment_33_56",
           "target_sentence": "And a very tight lid is being kept on any other sort of radiation related illnesses and leukemia and the like.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "So the only cancer they’re looking at is thyroid cancer and that’s really high, and you know it’s at 201 have already been diagnosed and some have metastasized.",
           "next_sentence": "All the other cancers and the like, and leukemia is so… It’s not just a catastrophe it’s a… HC: Yeah."
         },
@@ -4168,14 +4168,14 @@
         {
           "sample_id": "entertainment_33_61",
           "target_sentence": "They signed a document, I think in ‘59, with the IAEA that they would not report any medical effects of radiological disasters and they’ve stuck to that.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "Is that my understanding…? HC: Correct.",
           "next_sentence": "So they are in effect in this area part of the International Atomic Energy Agency whose mission is to promote nuclear power."
         },
         {
           "sample_id": "entertainment_33_62",
           "target_sentence": "So they are in effect in this area part of the International Atomic Energy Agency whose mission is to promote nuclear power.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "They signed a document, I think in ‘59, with the IAEA that they would not report any medical effects of radiological disasters and they’ve stuck to that.",
           "next_sentence": "So don’t even think about the WHO. it’s really obscene."
         },
@@ -4189,7 +4189,7 @@
         {
           "sample_id": "entertainment_33_64",
           "target_sentence": "GR: So what would… the incentive would be simply that they got funding? HC: I don’t know.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "So don’t even think about the WHO. it’s really obscene.",
           "next_sentence": "I really don’t know but they sold themselves to the devil."
         },
@@ -4210,14 +4210,14 @@
         {
           "sample_id": "entertainment_33_67",
           "target_sentence": "So there’s also the issue of biomagnification in the oceans, where you have radioactive debris, hundreds of tons of this radioactive water getting into the oceans and biomagnifying up through the food chain, so these radioactive particles can get inside our bodies.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "GR: That’s pretty incredible.",
           "next_sentence": "Could you speak to what you anticipate to see, what you would anticipate, whether it’s recorded by World Health authorities or not, what we could expect to see in the years ahead in terms of the illnesses that manifest themselves?"
         },
         {
           "sample_id": "entertainment_33_68",
           "target_sentence": "Could you speak to what you anticipate to see, what you would anticipate, whether it’s recorded by World Health authorities or not, what we could expect to see in the years ahead in terms of the illnesses that manifest themselves?",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "So there’s also the issue of biomagnification in the oceans, where you have radioactive debris, hundreds of tons of this radioactive water getting into the oceans and biomagnifying up through the food chain, so these radioactive particles can get inside our bodies.",
           "next_sentence": "HC: Well number one, Fukushima is a very agricultural prefecture."
         },
@@ -4238,14 +4238,14 @@
         {
           "sample_id": "entertainment_33_71",
           "target_sentence": "And the radiation spread far and wide through the Fukushima prefecture, and indeed they have been plowing up millions and millions of tons of radioactive dirt and storing it in plastic bags all over the prefecture.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "Beautiful, beautiful peaches, beautiful food, and lots of rice.",
           "next_sentence": "The mountains are highly radioactive and every time it rains, down comes radiation with the water."
         },
         {
           "sample_id": "entertainment_33_72",
           "target_sentence": "The mountains are highly radioactive and every time it rains, down comes radiation with the water.",
-          "label": "F",
+          "label": "C",
           "prev_sentence": "And the radiation spread far and wide through the Fukushima prefecture, and indeed they have been plowing up millions and millions of tons of radioactive dirt and storing it in plastic bags all over the prefecture.",
           "next_sentence": "So the radiation – the elements."
         },
@@ -4266,14 +4266,14 @@
         {
           "sample_id": "entertainment_33_75",
           "target_sentence": "Some have lives of seconds and some have lives of millions of years or lasts for millions of years will I say.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "And there are over 200 radioactive elements made in a nuclear reactor.",
           "next_sentence": "So there are many many isotopes, long-lasting isotopes – cesium, strontium, tritium is another one – but many, many on the soil in Fukushima."
         },
         {
           "sample_id": "entertainment_33_76",
           "target_sentence": "So there are many many isotopes, long-lasting isotopes – cesium, strontium, tritium is another one – but many, many on the soil in Fukushima.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "Some have lives of seconds and some have lives of millions of years or lasts for millions of years will I say.",
           "next_sentence": "And what happens is – you talked about biomagnification – when the plants take up the water from the soil, they take up the cesium which is a potassium analog – it resembles potassium."
         },
@@ -4294,28 +4294,28 @@
         {
           "sample_id": "entertainment_33_79",
           "target_sentence": "And these elements get magnified by orders of magnitude in the rice and in the plants.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Strontium 90 resembles calcium and the like.",
           "next_sentence": "And so when you eat food that is grown in Fukushima, the chances are it’s going to be relatively radioactive."
         },
         {
           "sample_id": "entertainment_33_80",
           "target_sentence": "And so when you eat food that is grown in Fukushima, the chances are it’s going to be relatively radioactive.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "And these elements get magnified by orders of magnitude in the rice and in the plants.",
           "next_sentence": "They’ve been diluting radioactive rice with non-radioactive rice to make it seem a bit better."
         },
         {
           "sample_id": "entertainment_33_81",
           "target_sentence": "They’ve been diluting radioactive rice with non-radioactive rice to make it seem a bit better.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "And so when you eat food that is grown in Fukushima, the chances are it’s going to be relatively radioactive.",
           "next_sentence": "Now, into the ocean go these isotopes as well, and the algae bio-magnify them by – you know -ten to a hundred times or more."
         },
         {
           "sample_id": "entertainment_33_82",
           "target_sentence": "Now, into the ocean go these isotopes as well, and the algae bio-magnify them by – you know -ten to a hundred times or more.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "They’ve been diluting radioactive rice with non-radioactive rice to make it seem a bit better.",
           "next_sentence": "And then the crustaceans eat the algae, bio-magnify it more."
         },
@@ -4392,28 +4392,28 @@
         {
           "sample_id": "entertainment_33_93",
           "target_sentence": "Well, a wonderful book was produced by the, uh, Russians, and published by the New York Academy of Sciences, called Chernobyl with over 5000 on the ground studies of children and diseases in Belarus and the Ukraine, and all over Europe.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "GR: Chernobyl as well, no? HC: Oh, Chernobyl!",
           "next_sentence": "And by now over a million people have already died from the Chernobyl disaster."
         },
         {
           "sample_id": "entertainment_33_94",
           "target_sentence": "And by now over a million people have already died from the Chernobyl disaster.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Well, a wonderful book was produced by the, uh, Russians, and published by the New York Academy of Sciences, called Chernobyl with over 5000 on the ground studies of children and diseases in Belarus and the Ukraine, and all over Europe.",
           "next_sentence": "And many diseases have been caused by that, including premature aging in children, microcephaly in babies, very small heads, diabetes, leukemia, I mean, I could go on and on."
         },
         {
           "sample_id": "entertainment_33_95",
           "target_sentence": "And many diseases have been caused by that, including premature aging in children, microcephaly in babies, very small heads, diabetes, leukemia, I mean, I could go on and on.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "And by now over a million people have already died from the Chernobyl disaster.",
           "next_sentence": "Um, and those diseases which have been very well described in that wonderful book, um, which everyone should read, are not being addressed or identified or looked for in the Fukushima or Japanese population."
         },
         {
           "sample_id": "entertainment_33_96",
           "target_sentence": "Um, and those diseases which have been very well described in that wonderful book, um, which everyone should read, are not being addressed or identified or looked for in the Fukushima or Japanese population.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "And many diseases have been caused by that, including premature aging in children, microcephaly in babies, very small heads, diabetes, leukemia, I mean, I could go on and on.",
           "next_sentence": "May I say that parts of Tokyo are extremely radioactive."
         },
@@ -4434,7 +4434,7 @@
         {
           "sample_id": "entertainment_33_99",
           "target_sentence": "And some of these samples, they’re so radioactive that they would classify to be buried in radioactive waste facilities in America.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "People have been measuring the dirt from rooves of apartments, from the roadway, from vacuum cleaner dust.",
           "next_sentence": "So, that’s number one."
         },
@@ -4455,28 +4455,28 @@
         {
           "sample_id": "entertainment_33_102",
           "target_sentence": "And uh, some of the areas where the athletes are going to be running, the dust and dirt there has been measured, and it’s highly radioactive.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "Number two, to have the Olympics in Fukushima just defies imagination.",
           "next_sentence": "So, this is Abe, the Prime Minister of Japan, who set this up to – as a sort of way to obscure what Fukushima really means."
         },
         {
           "sample_id": "entertainment_33_103",
           "target_sentence": "So, this is Abe, the Prime Minister of Japan, who set this up to – as a sort of way to obscure what Fukushima really means.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "And uh, some of the areas where the athletes are going to be running, the dust and dirt there has been measured, and it’s highly radioactive.",
           "next_sentence": "And those young athletes, you know, who are – and young people are much more sensitive to radiation, developing cancers later than older people – it’s just a catastrophe waiting to happen. GR: (Chuckle)."
         },
         {
           "sample_id": "entertainment_33_104",
           "target_sentence": "And those young athletes, you know, who are – and young people are much more sensitive to radiation, developing cancers later than older people – it’s just a catastrophe waiting to happen. GR: (Chuckle).",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "So, this is Abe, the Prime Minister of Japan, who set this up to – as a sort of way to obscure what Fukushima really means.",
           "next_sentence": "Is there anything that people can do, you know, whether they live in Japan or, say, the west coast of North America to mitigate the effects that this disaster has had, and may still be having eight years later? HC: Yes."
         },
         {
           "sample_id": "entertainment_33_105",
           "target_sentence": "Is there anything that people can do, you know, whether they live in Japan or, say, the west coast of North America to mitigate the effects that this disaster has had, and may still be having eight years later? HC: Yes.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "And those young athletes, you know, who are – and young people are much more sensitive to radiation, developing cancers later than older people – it’s just a catastrophe waiting to happen. GR: (Chuckle).",
           "next_sentence": "Do not eat any Japanese food because you don’t know where it’s sourced."
         },
@@ -4504,14 +4504,14 @@
         {
           "sample_id": "entertainment_33_109",
           "target_sentence": "Um, fish caught off the west coast of Canada and America, well, they’re not testing the fish so I don’t know what you’d do.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "Do not eat Japanese food. Period.",
           "next_sentence": "Um, I mean, most of it’s probably not radioactive but you don’t know because you can’t taste it."
         },
         {
           "sample_id": "entertainment_33_110",
           "target_sentence": "Um, I mean, most of it’s probably not radioactive but you don’t know because you can’t taste it.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "Um, fish caught off the west coast of Canada and America, well, they’re not testing the fish so I don’t know what you’d do.",
           "next_sentence": "Um they’ve closed down the air-borne radioactive measuring instruments off the west coast of America, uh, but that’s pretty bad, because there still could be another huge accident at those reactors."
         },
@@ -4525,14 +4525,14 @@
         {
           "sample_id": "entertainment_33_112",
           "target_sentence": "For instance, if there’s another large earthquake, number one, all those tanks would be destroyed and the water would pour into the Pacific.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Um they’ve closed down the air-borne radioactive measuring instruments off the west coast of America, uh, but that’s pretty bad, because there still could be another huge accident at those reactors.",
           "next_sentence": "Number two, there could be another meltdown, a release – huge release of radiation, um, from the damaged reactors."
         },
         {
           "sample_id": "entertainment_33_113",
           "target_sentence": "Number two, there could be another meltdown, a release – huge release of radiation, um, from the damaged reactors.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "For instance, if there’s another large earthquake, number one, all those tanks would be destroyed and the water would pour into the Pacific.",
           "next_sentence": "So, things are very tenuous, but they’re not just tenuous now."
         },
@@ -4594,7 +4594,7 @@
         {
           "sample_id": "entertainment_34_5",
           "target_sentence": "jackson  who is currently filming a remake of hollywood classic king kong  said he thought that the sale of mgm studios to the sony corporation would cast further uncertainty on the project.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "the rights to jrr tolkien s book are split between two major film studios.",
           "next_sentence": "the 43-year-old was in the australian city to visit a lord of the rings exhibition  which has attracted 140 000 visitors since it opened in december."
         },
@@ -4622,7 +4622,7 @@
         {
           "sample_id": "entertainment_34_9",
           "target_sentence": "jackson is thought to have secured the most lucrative film directing deal in history to remake king kong  which is currently in production in wellington.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "the fellowship of the ring from 2001 went on to make worldwide profits of $291 million (£152 million).",
           "next_sentence": "the picture  which stars naomi watts and oscar winner adrien brody  is due to be released in december."
         },
@@ -4663,7 +4663,7 @@
         {
           "sample_id": "entertainment_35_3",
           "target_sentence": "the actor repeatedly refused  throwing the book at her and saying:  for the last time  i won t glorify the mafia .",
-          "label": "M",
+          "label": "C",
           "prev_sentence": "the actor s friend budd schulberg told vanity fair magazine that brando s assistant suggested he read the novel.",
           "next_sentence": "but brando  who died last july at the age of 80  eventually took the role of don corleone  winning him an oscar in 1973 which he notoriously refused."
         },
@@ -4684,14 +4684,14 @@
         {
           "sample_id": "entertainment_35_6",
           "target_sentence": "schulberg told the magazine that brando s assistant realised the film star had warmed to the idea of the godfather role when he sported a drawn-on pencil moustache and asked:  how do i look   his assistant  alice marchak  said that he looked like george raft  an actor famed for playing gangsters on the silver screen.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "the actor sent a young woman dressed in native american costume to refuse the award on his behalf and to draw attention to the plight of native americans.",
           "next_sentence": "every time she went to see brando from then on  she added  he was wearing a different gangster-style moustache."
         },
         {
           "sample_id": "entertainment_35_7",
           "target_sentence": "every time she went to see brando from then on  she added  he was wearing a different gangster-style moustache.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "schulberg told the magazine that brando s assistant realised the film star had warmed to the idea of the godfather role when he sported a drawn-on pencil moustache and asked:  how do i look   his assistant  alice marchak  said that he looked like george raft  an actor famed for playing gangsters on the silver screen.",
           "next_sentence": "brando was asked to screen test for the role in the godfather  as studio executives were said to be reluctant for the actor to play the part following problems on the set of brando s previous film mutiny on the bounty ."
         },
@@ -4705,7 +4705,7 @@
         {
           "sample_id": "entertainment_35_9",
           "target_sentence": "in fact brando s academy award triumph revived his career.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "brando was asked to screen test for the role in the godfather  as studio executives were said to be reluctant for the actor to play the part following problems on the set of brando s previous film mutiny on the bounty .",
           "next_sentence": "the actor was nominated for an oscar the following year for his role in bernardo bertolucci s last tango in paris."
         },
@@ -4739,14 +4739,14 @@
         {
           "sample_id": "entertainment_36_1",
           "target_sentence": "Female filmmakers are seeing more representation in Hollywood’s less mainstream corners.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": null,
           "next_sentence": "Women are writing, directing and producing more independent films than ever, but they’re still getting less work than their male counterparts."
         },
         {
           "sample_id": "entertainment_36_2",
           "target_sentence": "Women are writing, directing and producing more independent films than ever, but they’re still getting less work than their male counterparts.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "Female filmmakers are seeing more representation in Hollywood’s less mainstream corners.",
           "next_sentence": "Women are making strides as directors (they directed 33 percent of independent films between 2018 and 2019, up from 29 percent); writers (32 percent, up from 26 percent); producers (37 percent up from 36 percent); executive producers (32 percent up from 26 percent); and editors (29 percent up from 27 percent), according to the latest study by the Center for the Study of Women in Television and Film at San Diego State University."
         },
@@ -4781,7 +4781,7 @@
         {
           "sample_id": "entertainment_36_7",
           "target_sentence": "“Despite these increases, it is important to note that women remain dramatically underrepresented, with independent films employing more than twice as many men as women in these roles.”",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "Lauzen, executive director of the Center for the Study of Women in Television and Film at San Diego State University, in an interview with Variety.",
           "next_sentence": "Indeed, men made up 68 percent of indepedent filmmaking jobs overall, compared to just 32 percent of women in roles like directors, producers and writers, the survey found."
         },
@@ -4802,7 +4802,7 @@
         {
           "sample_id": "entertainment_36_10",
           "target_sentence": "The report offered a simple solution: put more women in charge of movies.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Independent films generally refer to smaller-budget movies made by production companies that aren’t major Hollywood studios.",
           "next_sentence": "Women-led films bring forth more jobs for other women, disrupting male-dominated hiring patterns, the report found."
         },
@@ -4837,7 +4837,7 @@
         {
           "sample_id": "entertainment_36_15",
           "target_sentence": "To combat this disparity, filmmakers and Dr. Stacy L.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "In the past 11 years, just 4 percent of the top-grossing films have been directed by women.",
           "next_sentence": "Smith, the founder and director of media, diversity and social change at the Annenberg School for Communication & Journalism at the University of Southern California, launched the 4 Percent Challenge at the Sundance Film Festival this year, asking production companies and studios to hire a female director in the next 18 months."
         },
@@ -4851,7 +4851,7 @@
         {
           "sample_id": "entertainment_36_17",
           "target_sentence": "It’s even worse for women, particularly women of color, in animated films.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Smith, the founder and director of media, diversity and social change at the Annenberg School for Communication & Journalism at the University of Southern California, launched the 4 Percent Challenge at the Sundance Film Festival this year, asking production companies and studios to hire a female director in the next 18 months.",
           "next_sentence": "Just 2.5 percent of directors on the top 120 top-grossing animated films released between 2007 and 2018 had a female director, a study from earlier this month by USC’s Annenberg Inclusion Initiative with nonprofit Women in Animation found."
         },
@@ -4886,28 +4886,28 @@
         {
           "sample_id": "entertainment_36_22",
           "target_sentence": "(Wahlberg donated his salary to the Time’s Up Fund after the news broke.) And actress Octavia Spencer has talked about being paid less than her costars, revealing that her colleague Jessica Chastain helped her get paid five times more than her original salary offer.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "Actress Michelle Williams revealed she was paid $1,000 for reshoots of her film “All the Money in the World” to Mark Wahlberg’s $1.5 million in 2017.",
           "next_sentence": "There’s plenty of evidence that women-led films become box office blockbusters."
         },
         {
           "sample_id": "entertainment_36_23",
           "target_sentence": "There’s plenty of evidence that women-led films become box office blockbusters.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "(Wahlberg donated his salary to the Time’s Up Fund after the news broke.) And actress Octavia Spencer has talked about being paid less than her costars, revealing that her colleague Jessica Chastain helped her get paid five times more than her original salary offer.",
           "next_sentence": "Take Patty Jenkin’s “Wonder Woman,” in 2017, which raked in more than $103 million on its opening weekend, the highest-grossing superhero origin story, outranking 2002’s “Spider-Man,” and making Jenkins the highest paid women director of all time."
         },
         {
           "sample_id": "entertainment_36_24",
           "target_sentence": "Take Patty Jenkin’s “Wonder Woman,” in 2017, which raked in more than $103 million on its opening weekend, the highest-grossing superhero origin story, outranking 2002’s “Spider-Man,” and making Jenkins the highest paid women director of all time.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "There’s plenty of evidence that women-led films become box office blockbusters.",
           "next_sentence": "And as of late, women have been dominating the big and small screens."
         },
         {
           "sample_id": "entertainment_36_25",
           "target_sentence": "And as of late, women have been dominating the big and small screens.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Take Patty Jenkin’s “Wonder Woman,” in 2017, which raked in more than $103 million on its opening weekend, the highest-grossing superhero origin story, outranking 2002’s “Spider-Man,” and making Jenkins the highest paid women director of all time.",
           "next_sentence": "Mindy Kaling wrote, produced and starred in “Late Night,” a workplace comedy about a female talk show host (Emma Thompson) who hires a female writer (Kaling)."
         },
@@ -5038,7 +5038,7 @@
         {
           "sample_id": "entertainment_38_3",
           "target_sentence": "groups including the musicians  union are calling for an end to the  raw deal  faced by british performers.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "a singer hoping to perform in the us can expect to pay $1 300 (£680) simply for obtaining a visa.",
           "next_sentence": "us acts are not faced with comparable expense and bureaucracy when visiting the uk for promotional purposes."
         },
@@ -5052,14 +5052,14 @@
         {
           "sample_id": "entertainment_38_5",
           "target_sentence": "nigel mccune from the musicians  union said british musicians are  disadvantaged  compared to their us counterparts.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "us acts are not faced with comparable expense and bureaucracy when visiting the uk for promotional purposes.",
           "next_sentence": "a sponsor has to make a petition on their behalf  which is a form amounting to nearly 30 pages  while musicians face tougher regulations than athletes and journalists."
         },
         {
           "sample_id": "entertainment_38_6",
           "target_sentence": "a sponsor has to make a petition on their behalf  which is a form amounting to nearly 30 pages  while musicians face tougher regulations than athletes and journalists.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "nigel mccune from the musicians  union said british musicians are  disadvantaged  compared to their us counterparts.",
           "next_sentence": "if you make a mistake on your form  you risk a five-year ban and thus the ability to further your career   says mr mccune."
         },
@@ -5080,14 +5080,14 @@
         {
           "sample_id": "entertainment_38_9",
           "target_sentence": "the current situation is preventing british acts from maintaining momentum and developing in the us   he added.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "the us is the world s biggest music market  which means something has to be done about the creaky bureaucracy   says mr mccune.",
           "next_sentence": "the musicians  union stance is being endorsed by the music managers  forum (mmf)  who say british artists face  an uphill struggle  to succeed in the us  thanks to the tough visa requirements  which are also seen as impractical."
         },
         {
           "sample_id": "entertainment_38_10",
           "target_sentence": "the musicians  union stance is being endorsed by the music managers  forum (mmf)  who say british artists face  an uphill struggle  to succeed in the us  thanks to the tough visa requirements  which are also seen as impractical.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "the current situation is preventing british acts from maintaining momentum and developing in the us   he added.",
           "next_sentence": "the mmf s general secretary james seller said:  imagine if you were an orchestra from the orkneys  every member would have to travel to london to have their visas processed."
         },
@@ -5101,7 +5101,7 @@
         {
           "sample_id": "entertainment_38_12",
           "target_sentence": "the us market is seen as the holy grail and one of the benchmarks of success  and we re still going to fight to get in there.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "the mmf s general secretary james seller said:  imagine if you were an orchestra from the orkneys  every member would have to travel to london to have their visas processed.",
           "next_sentence": "it s still very important  but there are other markets like europe  india and china   added mr seller."
         },
@@ -5129,7 +5129,7 @@
         {
           "sample_id": "entertainment_38_16",
           "target_sentence": "we are aware of the importance of cultural exchange and we will do our best to facilitate that   he added.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "a us embassy spokesman said:  we are aware that entertainers require visas for time-specific visas and are doing everything we can to process those applications speedily.",
           "next_sentence": null
         }
@@ -5211,14 +5211,14 @@
         {
           "sample_id": "entertainment_40_1",
           "target_sentence": "berlin honours s korean director south korean film director im kwon-taek has received an honorary golden bear at the berlin film festival.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": null,
           "next_sentence": "im  who has made more than 100 films in a 40-year career  was hailed for his  remarkable visual beauty  technical innovation  and intellectual depth ."
         },
         {
           "sample_id": "entertainment_40_2",
           "target_sentence": "im  who has made more than 100 films in a 40-year career  was hailed for his  remarkable visual beauty  technical innovation  and intellectual depth .",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "berlin honours s korean director south korean film director im kwon-taek has received an honorary golden bear at the berlin film festival.",
           "next_sentence": "twenty of his films are screening in a special retrospective during the festival  which runs until 20 february."
         },
@@ -5349,28 +5349,28 @@
         {
           "sample_id": "entertainment_42_1",
           "target_sentence": "When it comes to culture, abortion advocates have some big goals.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": null,
           "next_sentence": "They want to see abortion positively portrayed in movies and television shows, and already, they’re getting their wish."
         },
         {
           "sample_id": "entertainment_42_2",
           "target_sentence": "They want to see abortion positively portrayed in movies and television shows, and already, they’re getting their wish.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "When it comes to culture, abortion advocates have some big goals.",
           "next_sentence": "Abortion is, indeed, being shown positively in media, but movies and television aren’t enough."
         },
         {
           "sample_id": "entertainment_42_3",
           "target_sentence": "Abortion is, indeed, being shown positively in media, but movies and television aren’t enough.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "They want to see abortion positively portrayed in movies and television shows, and already, they’re getting their wish.",
           "next_sentence": "Now, abortion advocates want video games to reflect a pro-abortion agenda."
         },
         {
           "sample_id": "entertainment_42_4",
           "target_sentence": "Now, abortion advocates want video games to reflect a pro-abortion agenda.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Abortion is, indeed, being shown positively in media, but movies and television aren’t enough.",
           "next_sentence": "Newsbusters reports on a recent episode of the tech-oriented “Chips with Everything” podcast, which featured feminist tech writer Laura Hudson and game developer Mary Flanagan of Tiltfactor as guests."
         },
@@ -5405,28 +5405,28 @@
         {
           "sample_id": "entertainment_42_9",
           "target_sentence": "As the characters move throughout the pregnancy, players also create their own “fantastic” baby.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "The characters need to be fed, kept happy and clean, given medicine when they’re ill, and even pray.",
           "next_sentence": "But if anything goes wrong — gaining too much weight, becoming too afraid or too sick — the mother will die."
         },
         {
           "sample_id": "entertainment_42_10",
           "target_sentence": "But if anything goes wrong — gaining too much weight, becoming too afraid or too sick — the mother will die.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "As the characters move throughout the pregnancy, players also create their own “fantastic” baby.",
           "next_sentence": "And then, at the end of the pregnancy, regardless of how well the mother is taken care of, her baby will end up with a life-threatening birth defect, like hydrocephaly or twin reversed arterial perfusion."
         },
         {
           "sample_id": "entertainment_42_11",
           "target_sentence": "And then, at the end of the pregnancy, regardless of how well the mother is taken care of, her baby will end up with a life-threatening birth defect, like hydrocephaly or twin reversed arterial perfusion.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "But if anything goes wrong — gaining too much weight, becoming too afraid or too sick — the mother will die.",
           "next_sentence": "Afterwards, players are shown a series of messages about the need for abortion to remain legal."
         },
         {
           "sample_id": "entertainment_42_12",
           "target_sentence": "Afterwards, players are shown a series of messages about the need for abortion to remain legal.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "And then, at the end of the pregnancy, regardless of how well the mother is taken care of, her baby will end up with a life-threatening birth defect, like hydrocephaly or twin reversed arterial perfusion.",
           "next_sentence": "The insinuation is clear: women need to have abortions, because pregnancy is hard, and you could end up with a defective baby."
         },
@@ -5440,7 +5440,7 @@
         {
           "sample_id": "entertainment_42_14",
           "target_sentence": "To tech writer Hudson, this kind of game is ideal, because it could help change people’s minds on abortion.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "The insinuation is clear: women need to have abortions, because pregnancy is hard, and you could end up with a defective baby.",
           "next_sentence": "“I think when you look at what tends to change people’s hearts around politics it’s not usually because somebody made a really good argument, y’know,” she said."
         },
@@ -5468,7 +5468,7 @@
         {
           "sample_id": "entertainment_42_18",
           "target_sentence": "Video games, then, can be another way to make people look at abortion more positively, without getting into any actual facts.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "I think a lot of what changes people’s hearts, particularly around divisive issues, is knowing someone or meeting someone who is personally affected by it.”",
           "next_sentence": "Game developer Flanagan explained, “What we try to do is put people in situations where they’re open and can explore a world or they can play a game that is like a trivia game,” with the goal of “shifting attitudes, mindsets, and possibly behaviors.”"
         },
@@ -5482,7 +5482,7 @@
         {
           "sample_id": "entertainment_42_20",
           "target_sentence": "And she doesn’t want to make abortion-specific games, either; instead, she wants existing games to have pro-abortion messages inserted.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Game developer Flanagan explained, “What we try to do is put people in situations where they’re open and can explore a world or they can play a game that is like a trivia game,” with the goal of “shifting attitudes, mindsets, and possibly behaviors.”",
           "next_sentence": "“Fantastic Fetus” is not the first video game created by abortion activists."
         },
@@ -5503,28 +5503,28 @@
         {
           "sample_id": "entertainment_42_23",
           "target_sentence": "Another offering was billed as a “choose-your-own-adventure” style game, where you choose what kinds of decisions a woman facing an unplanned pregnancy makes.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "After Texas banned late-term abortions, a game was created called “Choice: Texas” that purported to show how difficult it was for women in the state to undergo an abortion.",
           "next_sentence": "However, the game stacks the choices against life, with a hasty abortion presented as the best choice — and choosing life ends up with the woman ultimately needing a late-term abortion anyway, or sick, in premature labor, and with crushing debt."
         },
         {
           "sample_id": "entertainment_42_24",
           "target_sentence": "However, the game stacks the choices against life, with a hasty abortion presented as the best choice — and choosing life ends up with the woman ultimately needing a late-term abortion anyway, or sick, in premature labor, and with crushing debt.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "Another offering was billed as a “choose-your-own-adventure” style game, where you choose what kinds of decisions a woman facing an unplanned pregnancy makes.",
           "next_sentence": "The idea of changing people’s minds on abortion through video games is an odd one, especially considering that people are not especially fond of abortion."
         },
         {
           "sample_id": "entertainment_42_25",
           "target_sentence": "The idea of changing people’s minds on abortion through video games is an odd one, especially considering that people are not especially fond of abortion.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "However, the game stacks the choices against life, with a hasty abortion presented as the best choice — and choosing life ends up with the woman ultimately needing a late-term abortion anyway, or sick, in premature labor, and with crushing debt.",
           "next_sentence": "Even when Americans want it to be legal, they want it to be heavily restricted — and a video game is not going to manipulate people into changing their minds."
         },
         {
           "sample_id": "entertainment_42_26",
           "target_sentence": "Even when Americans want it to be legal, they want it to be heavily restricted — and a video game is not going to manipulate people into changing their minds.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "The idea of changing people’s minds on abortion through video games is an odd one, especially considering that people are not especially fond of abortion.",
           "next_sentence": "“Like” Live Action News on Facebook for more pro-life news and commentary!"
         },
@@ -5565,7 +5565,7 @@
         {
           "sample_id": "entertainment_43_4",
           "target_sentence": "judges said the film tackled the contentious subject with  great insight and sensitivity .",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "the low-budget film  directed by nicole kassell  is about a convicted child molester trying to rebuild his life after 12 years in jail.",
           "next_sentence": "previous films to take the prize include the oscar-winning boys don t cry  which was about the true life story of murdered transsexual brandon teena."
         },
@@ -5648,7 +5648,7 @@
         {
           "sample_id": "entertainment_44_5",
           "target_sentence": "It is a must-shop store offering handcrafted candles, bath products, children’s gifts, jewelry, housewares and gifts, with fresh flowers, plants and microgreens in the greenhouse.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "Abilis Gardens & Gifts is selling holiday gifts and its greenhouse is filled with holiday wreaths and greenery.",
           "next_sentence": "Prices range from $5 to $40 and proceeds support Abilis’ programs."
         },
@@ -5690,7 +5690,7 @@
         {
           "sample_id": "entertainment_44_11",
           "target_sentence": "The Community Room and turret is decorated with their creations and they will also be featured hanging from our rafters.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "Abilis Gardens & Gifts is at 50 Glenville St. For more info, visit www.abilis.us or call 203-531-GIFT (4438). The Cos Cob Library is showcasing the beautiful work of the Common Threads quilters for their biannual show through Saturday.",
           "next_sentence": "Visitors to the library are invited to view the display."
         },
@@ -5704,7 +5704,7 @@
         {
           "sample_id": "entertainment_44_13",
           "target_sentence": "The Byram Shubert Library is hosting an exhibition of the work of two artists — photographer Brent Keeting and painter Marialiisa Pettengi — in a show called “Lyrical Landscapes and Bold Abstractions” through Dec. 28.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "Visitors to the library are invited to view the display.",
           "next_sentence": "There will be an artists reception from 3 to 5 p.m. Saturday in the Community Room."
         },
@@ -5725,7 +5725,7 @@
         {
           "sample_id": "entertainment_44_16",
           "target_sentence": "The Bruce Museum’s latest exhibition will feature depictions of sea serpents crushing ships, 7-foot-tall giants, a mummified Porsche, and a menagerie of other oddities sure to pique the interest of any visitor interested in the intersection of art and science.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "Refreshments will be served and sponsored by the Friends of the Byram Shubert Library.",
           "next_sentence": "The display, called “Collecting Reimagined: A 2D Curiosity Cabinet” will open on Saturday and be on view in the museum’s Bantle Lecture Gallery through March 24."
         },
@@ -5788,7 +5788,7 @@
         {
           "sample_id": "entertainment_44_25",
           "target_sentence": "Tom’s music is intended to get children moving, singing, feeling confident and having fun.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "His repertoire includes original songs as well as traditional favorites.",
           "next_sentence": "Join Greenwich Audubon Center on the second Saturday of the month as it supports people who are sensory-sensitive and would like to enjoy learning about nature in a quiet and soothing space."
         },
@@ -5830,7 +5830,7 @@
         {
           "sample_id": "entertainment_44_31",
           "target_sentence": "All are welcome for the free event.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Event will be from 9 to 11 a.m. Saturday at Audubon at 613 Riversville Road.",
           "next_sentence": "RSVP is required with Accessibility Coordinator Caroline Bailey at Caroline."
         },
@@ -5893,7 +5893,7 @@
         {
           "sample_id": "entertainment_44_40",
           "target_sentence": "Discover healthy living for people and wildlife together — these unique sessions will bring attention to what is happening in nature around us and the health of the environment, while developing techniques in yoga and wellness.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "Join yoga instructor Brittani Kelly (BK) for Nature Yoga sessions on Sundays at the Greenwich Audubon Center at 613 Riversville Road.",
           "next_sentence": "Bring a yoga mat if you have one; mats will be available to borrow."
         },
@@ -6264,7 +6264,7 @@
         {
           "sample_id": "entertainment_44_93",
           "target_sentence": "Speakers return on Jan. 8 with Patricia Sesto, director of environmental affairs for the Town of Greenwich, on “How Can Greenwich Handle Rising Sea Levels.”",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "No meetings will be held on Dec. 25 and Jan. 1.",
           "next_sentence": "Tai Chi is a relaxing exercise that can loosen joints, improve balance and teach graceful movements to music."
         },
@@ -6299,7 +6299,7 @@
         {
           "sample_id": "entertainment_44_98",
           "target_sentence": "The Greenwich Conservatory Ballet will present the must-see holiday classic, “The Nutcracker.” at the Westport Country Playhouse.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "For info, call Joe at 203-504-4678.",
           "next_sentence": "The performances will feature Conservatory students and guest from The Rock School of PA, ABT JKO School, NY Dance Theatre and the European School of Ballet."
         },
@@ -6327,7 +6327,7 @@
         {
           "sample_id": "entertainment_44_102",
           "target_sentence": "Santa and his live reindeer — Dasher, Dancer and Prancer — have returned for the 11th annual Greenwich Reindeer Festival & Santa’s Village at Sam Bridge Nursery & Greenhouses, 437 North St., this holiday season.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "Shows are at 4 p.m. Dec. 22 and at 12:30 and 3:30 p.m. Dec. 23.",
           "next_sentence": "The town tradition continues through Dec. 24."
         },
@@ -6376,7 +6376,7 @@
         {
           "sample_id": "entertainment_44_109",
           "target_sentence": "This festive show offers fine artworks created by ASOG’s member artists.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "The Art Society of Old Greenwich will hold its 2019 Holiday Art Show and Sale at the Gertrude White Gallery at the YWCA of Greenwich, through Dec. 27.",
           "next_sentence": "All artworks, in a variety of media, are available for purchase."
         },
@@ -6411,7 +6411,7 @@
         {
           "sample_id": "entertainment_44_114",
           "target_sentence": "The grid system is the common thread in Glaser’s work, from cityscapes created from men’s suit fabric, portrait mosaics made completely from Band-Aid-like bandages, neo-pointillist drawings, photorealist paintings or mixed media pieces.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "The Greenwich Art Society is presenting “Glaser and the Grid,” a solo exhibition by Scott Glaser from the artist’s personal collection, through Jan. 3 at its gallery at 299 Greenwich Ave., second floor.",
           "next_sentence": "The artwork will be on view from 10 a.m. to 4 p.m. Tuesdays through Fridays and noon to 4 p.m. Saturdays."
         },
@@ -6495,7 +6495,7 @@
         {
           "sample_id": "entertainment_44_126",
           "target_sentence": "Titled “From College to Career,” the workshop will focus on helping students gain the essential skills they need to get their foot in the door.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "The Greenwich Library will host an interactive workshop from 9:30 a.m. to 2:30 p.m. Jan. 6 to help high school seniors and college students ages 18 to 23 kickstart their job or internship search.",
           "next_sentence": "Participants will leave with a working resume, a LinkedIn page, a professional headshot, tips on what to wear (and what not to wear) when interviewing, and networking skills they can use throughout college and beyond."
         },
@@ -6544,7 +6544,7 @@
         {
           "sample_id": "entertainment_44_133",
           "target_sentence": "The exhibit includes stories of the grit and resilience of immigrants and refugees, including 12 who found home in Greenwich.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "The Greenwich Historical Society at 47 Strickland Road, Cos Cob, is presenting an exhibition on the immigrant experience called “An American Story: Finding Home in Fairfield County” through Jan. 6.",
           "next_sentence": "The stories illuminated in this exhibition reach across the world from five continents, shining a light on the ways that refugees and asylum seekers find hope and persevere in the face of challenges for creating new lives in Fairfield County."
         },
@@ -6836,14 +6836,14 @@
         {
           "sample_id": "entertainment_46_2",
           "target_sentence": "Held in the famous and historic setting of the Linlithgow Palace Courtyard, you can dance to live music from great Scottish bands.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "There’s entertainment to suit all ages and tastes in West Lothian to keep everyone happy.",
           "next_sentence": "You don’t need to know the dances, the ‘caller’ will talk you through all the routines and make sure you have a memorable experience."
         },
         {
           "sample_id": "entertainment_46_3",
           "target_sentence": "You don’t need to know the dances, the ‘caller’ will talk you through all the routines and make sure you have a memorable experience.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "Held in the famous and historic setting of the Linlithgow Palace Courtyard, you can dance to live music from great Scottish bands.",
           "next_sentence": "Scotch Hop is an unforgettable experience attracting people from across the world each year so go along and join in."
         },
@@ -6878,7 +6878,7 @@
         {
           "sample_id": "entertainment_46_8",
           "target_sentence": "Pick up your explorer booklet from the customer service desk, find the missing letters around the centre and guess the word for your chance to win a £50 gift card.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "Budding paleontologists can take part in the the dino-hunt around The Centre.",
           "next_sentence": "All participants will receive a certificate and sticker for taking part."
         },
@@ -6947,14 +6947,14 @@
         {
           "sample_id": "entertainment_47_1",
           "target_sentence": "charity single for quake relief singers including sir cliff richard and boy george are recording a charity single to help raise funds for victims of the asian tsunami.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": null,
           "next_sentence": "they hope the song will raise more than £2m for the relief fund."
         },
         {
           "sample_id": "entertainment_47_2",
           "target_sentence": "they hope the song will raise more than £2m for the relief fund.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "charity single for quake relief singers including sir cliff richard and boy george are recording a charity single to help raise funds for victims of the asian tsunami.",
           "next_sentence": "the song  titled grief never grows old and described as a melancholy ballad  was written by radio dj mike read."
         },
@@ -7003,7 +7003,7 @@
         {
           "sample_id": "entertainment_47_9",
           "target_sentence": "it s a natural home for it because people kept saying to me   it s such a good song   but it s such a sad song   read said.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "now he plans to have it recorded by a collection of pop stars under the name one world project.",
           "next_sentence": "he said the song was a slow ballad and would work with around 10 singers  rather than a  sing-along  like the band aid 20 single raising money for famine relief in africa."
         },
@@ -7038,7 +7038,7 @@
         {
           "sample_id": "entertainment_47_14",
           "target_sentence": "read said all the funds raised by the record would go to the dec.  i d only be pleased in terms of what it meant for sales if it got to number one   he added.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "i was totally shocked at the enormity and suddenness of the disaster and in tears on seeing the orphaned children wandering aimlessly in search of their parents   he said.",
           "next_sentence": "the charity welcomed the news of the single and said money raised would help its agencies working in the affected region to rebuild survivors  lives and livelihoods."
         },
@@ -7072,14 +7072,14 @@
         {
           "sample_id": "entertainment_48_3",
           "target_sentence": "it s a lifetime achievement award  which is completely and utterly surreal  given i m only 30 years old   dicaprio said.",
-          "label": "M",
+          "label": "C",
           "prev_sentence": "the star was presented with the award by martin scorsese  who directed him in oscar-nominated movie the aviator.",
           "next_sentence": "but what has it been  almost 17 years now."
         },
         {
           "sample_id": "entertainment_48_4",
           "target_sentence": "but what has it been  almost 17 years now.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "it s a lifetime achievement award  which is completely and utterly surreal  given i m only 30 years old   dicaprio said.",
           "next_sentence": "a retrospective of his movies was shown."
         },
@@ -7176,7 +7176,7 @@
         {
           "sample_id": "entertainment_49_5",
           "target_sentence": "He also wants CEO Mark Frissora out.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Icahn intends to continue talks with Caesar's board of directors and management, and if necessary, he may nominate a slate of directors at the company's annual shareholders meeting, according to the filing.",
           "next_sentence": "Frissora, who joined Caesars in 2015 and guided it through bankruptcy reorganization, was scheduled to leave his role Feb. 8, but his departure was pushed back to the end of April."
         },
@@ -7190,7 +7190,7 @@
         {
           "sample_id": "entertainment_49_7",
           "target_sentence": "Icahn does not want Frissora's tenure to be extended again, according to the filing, and expects the company to not appoint a new leader until after he and the board have engaged \"meaningfully.\"",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "Frissora, who joined Caesars in 2015 and guided it through bankruptcy reorganization, was scheduled to leave his role Feb. 8, but his departure was pushed back to the end of April.",
           "next_sentence": "Caesars emerged from an $18 billion bankruptcy in late 2017."
         },
@@ -7218,7 +7218,7 @@
         {
           "sample_id": "entertainment_49_11",
           "target_sentence": "The proposal called for Caesars to \"acquire substantially all of Golden Nugget's restaurant, hospitality, entertainment and gaming businesses in exchange for a significant minority of Caesars' common shares.\"",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "Caesars in November confirmed that it had received a proposal from casino operator Golden Nugget LLC, owned by Houston billionaire Tilman Fertitta.",
           "next_sentence": "Caesars at the time said its board rejected the proposal, but \"continues to be open to reasonable alternatives to enhance long-term shareholder value.\""
         },
@@ -7232,7 +7232,7 @@
         {
           "sample_id": "entertainment_49_13",
           "target_sentence": "The Wall Street Journal last week reported an official with Eldorado Resorts Inc. also \"made a preliminary approach\" over the past several months.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "Caesars at the time said its board rejected the proposal, but \"continues to be open to reasonable alternatives to enhance long-term shareholder value.\"",
           "next_sentence": "Caesars did not immediately respond to a request for comment on the filing."
         },
@@ -7267,7 +7267,7 @@
         {
           "sample_id": "entertainment_49_18",
           "target_sentence": "Morgan in a note to investors said they do not see an obvious suitor that could or would take Caesars' entire portfolio of assets, including the nine properties on the Las Vegas Strip.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "But it's still down 27 percent in past 12 months. Analysts at J.P.",
           "next_sentence": "They pointed to MGM Resorts International as the \"most obvious potential acquirer,\" but said that company has been clear about giving priority to its current projects."
         },
@@ -7281,7 +7281,7 @@
         {
           "sample_id": "entertainment_49_20",
           "target_sentence": "Alex Bumazhny, gambling analyst with Fitch Ratings, told The Associated Press Icahn \"has a good track record\" in the gambling sector.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "They pointed to MGM Resorts International as the \"most obvious potential acquirer,\" but said that company has been clear about giving priority to its current projects.",
           "next_sentence": "\"When news breaks of (a merger and acquisition) transaction, the target's stock will gravitate towards the premium price being offered by the acquirer,\" he said."
         },
@@ -7295,7 +7295,7 @@
         {
           "sample_id": "entertainment_49_22",
           "target_sentence": "\"Seeing that Caesars has potential suitors it's possible Icahn is simply banking he could push Caesars to accept an offer and bank the (merger and acquisition) premium.\"",
-          "label": "C",
+          "label": "M",
           "prev_sentence": "\"When news breaks of (a merger and acquisition) transaction, the target's stock will gravitate towards the premium price being offered by the acquirer,\" he said.",
           "next_sentence": "Icahn last year sold his Tropicana Entertainment casino company for $1.85 billion."
         },
@@ -7309,7 +7309,7 @@
         {
           "sample_id": "entertainment_49_24",
           "target_sentence": "David Katz, equity analyst at Jefferies, said there are things Caesars could do to capture a better value for its stock that do not involve selling itself, including sharing expectations more effectively.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "Icahn last year sold his Tropicana Entertainment casino company for $1.85 billion.",
           "next_sentence": "He said Caesars' \"value story\" has not been told effectively since the company emerged from bankruptcy."
         },
@@ -7323,7 +7323,7 @@
         {
           "sample_id": "entertainment_49_26",
           "target_sentence": "\"That story is about the brand and the loyalty program that they have,\" he said.",
-          "label": "F",
+          "label": "M",
           "prev_sentence": "He said Caesars' \"value story\" has not been told effectively since the company emerged from bankruptcy.",
           "next_sentence": "\"We know that that brand has value because when you visit their properties, whether or not they are the nicest, they are consistently the busiest, and that's because of the loyalty program they have.\""
         },
@@ -7343,7 +7343,7 @@
         {
           "sample_id": "entertainment_50_1",
           "target_sentence": "The NY Daily News has long been a thorn in the side of President Trump.",
-          "label": "C",
+          "label": "M",
           "prev_sentence": null,
           "next_sentence": "Every month, a cover page of theirs makes headlines everywhere for the witty and humorous attempts at getting the president riled up."
         },
@@ -7371,7 +7371,7 @@
         {
           "sample_id": "entertainment_50_5",
           "target_sentence": "According to the LA Times: Russian President Vladimir Putin said Thursday that President Trump was impeached for “completely fabricated reasons,” calling the move by Democrats a continuation of their fight against the Republican leader.",
-          "label": "M",
+          "label": "F",
           "prev_sentence": "Vladimir Putin himself spoke out about his close pal being impeached, because what will Putin do when he no longer controls the president of the United States?",
           "next_sentence": "“It’s unlikely they will want to remove from power a representative of their own party based on what are, in my opinion, completely fabricated reasons,” Putin said during his annual marathon news conference in Moscow."
         },
@@ -7399,14 +7399,14 @@
         {
           "sample_id": "entertainment_50_9",
           "target_sentence": "Republicans, of course, will continue to insist that the president has done nothing wrong and that Democrats are convicting him merely as a way of overthrowing the 2016 election.",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "People responding to the Daily News’ tweet were thrilled at the fact that the president is finally being held accountable for his crooked actions as our leader.",
           "next_sentence": "Check out the best comments left on the tweet below via screenshot:"
         },
         {
           "sample_id": "entertainment_50_10",
           "target_sentence": "Check out the best comments left on the tweet below via screenshot:",
-          "label": "C",
+          "label": "F",
           "prev_sentence": "Republicans, of course, will continue to insist that the president has done nothing wrong and that Democrats are convicting him merely as a way of overthrowing the 2016 election.",
           "next_sentence": null
         }
