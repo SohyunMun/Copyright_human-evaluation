@@ -127,15 +127,12 @@ def load_annotation_from_db(sample_id: str, annotator: str, round_num: int = 1):
         """, (sample_id, annotator, round_num, round_num)).fetchone()
         if row:
             q1, final_label = row[0], row[1]
-            # q1 값으로 O/X 판별
-            # q1=1 → O(True), q1=0 → X(False), q1=NULL → 미제출/제외(None)
             if q1 is None:
-                is_correct = None   # 미제출 또는 제외
+                is_correct = None
             elif q1 == 1:
-                is_correct = True   # O 제출
+                is_correct = True
             else:
-                is_correct = False  # X 제출
-
+                is_correct = False
             return {"q1": q1, "final_label": final_label, "is_correct": is_correct}
         return {"q1": None, "final_label": None, "is_correct": None}
     except Exception as e:
@@ -210,15 +207,12 @@ def _classify_samples(all_annotations, decisions=None):
         labels = []
 
         for a in anns:
-            # q1=NULL인 행(미제출/제외)은 집계 제외
             if a.get("q1") is None:
                 continue
 
             if a["final_label"] is None:
-                # O 제출 → LLM 예측 라벨 사용
                 label = predicted
             else:
-                # X 제출 → 어노테이터 직접 선택 라벨 사용
                 label = a["final_label"]
 
             if label in ("F", "C", "M"):
@@ -257,7 +251,6 @@ def _build_iaa_data(conn):
     label_dict = defaultdict(list)
 
     for sample_id, annotator, label, q1 in rows:
-        # q1=NULL(미제출/제외)은 IAA 계산에서도 제외
         if q1 is None:
             continue
 
@@ -301,7 +294,9 @@ def _compute_all_iaa(conn):
     return result
 
 
+# ─────────────────────────────────────────────
 #  기본 엔드포인트
+# ─────────────────────────────────────────────
 
 @app.get("/sample")
 def get_sample(index: int = 0, category: str = "ALL"):
@@ -338,7 +333,8 @@ def get_last_index(annotator: str, category: str = "ALL"):
     cursor = conn.cursor()
     try:
         filtered = get_filtered(category)
-        # q1 IS NOT NULL 조건 추가: 제외 샘플(q1=NULL)은 "제출 완료"에서 제외
+
+        # 제출 완료(q1 IS NOT NULL) + 제외(excluded_samples) 모두 처리 완료로 간주
         submitted_ids = set(
             r[0] for r in cursor.execute("""
                 SELECT DISTINCT sample_id FROM annotations
@@ -346,10 +342,17 @@ def get_last_index(annotator: str, category: str = "ALL"):
                   AND q1 IS NOT NULL
             """, (annotator,)).fetchall()
         )
+        excluded_ids = set(
+            r[0] for r in cursor.execute("""
+                SELECT DISTINCT sample_id FROM excluded_samples
+                WHERE annotator=?
+            """, (annotator,)).fetchall()
+        )
+        done_ids = submitted_ids | excluded_ids  # 제출 + 제외 합집합
 
         last_idx = 0
         for i, s in enumerate(filtered):
-            if s["sample_id"] in submitted_ids:
+            if s["sample_id"] in done_ids:
                 last_idx = i + 1
         return {"last_index": min(last_idx, len(filtered) - 1)}
     except Exception as e:
@@ -376,9 +379,8 @@ def submit(data: dict):
             if final_label not in ("F", "C", "M"):
                 return {"status": "error", "message": "final_label must be F/C/M when disagree"}
         else:
-            final_label = None  # O 제출 시 LLM 라벨 사용
+            final_label = None
 
-        # q1을 0/1로 저장
         # O 제출 → q1=1, X 제출 → q1=0
         q1 = 1 if is_correct else 0
 
@@ -411,13 +413,11 @@ def submit(data: dict):
         os.makedirs(annotator_dir, exist_ok=True)
         safe_sample_id = sample_id.replace("/", "_")
         file_path = os.path.join(annotator_dir, f"{safe_sample_id}.jsonl")
-        # 파일 저장 시 q1=0/1로 기록
         record = {
             "sample_id": sample_id,
             "annotator": annotator,
-            "q1": q1,           # 0 또는 1
+            "q1": q1,
             "final_label": final_label
-            # round는 저장하지 않음
         }
         existing_records = {}
         if os.path.exists(file_path):
@@ -494,7 +494,6 @@ def get_submitted_ids(annotator: str, category: str = "ALL"):
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
-        # q1 IS NOT NULL 조건 추가: 제외 샘플을 제출 완료에서 제외
         rows = cursor.execute("""
             SELECT DISTINCT sample_id FROM annotations
             WHERE annotator=? AND (round IS NULL OR round = 1)
@@ -513,6 +512,29 @@ def get_submitted_ids(annotator: str, category: str = "ALL"):
         conn.close()
 
 
+# 특정 어노테이터가 제외한 샘플 인덱스 목록 반환
+@app.get("/excluded_ids")
+def get_excluded_ids(annotator: str, category: str = "ALL"):
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        rows = cursor.execute("""
+            SELECT DISTINCT sample_id FROM excluded_samples
+            WHERE annotator=?
+        """, (annotator,)).fetchall()
+
+        excluded = set(r[0] for r in rows)
+        filtered = get_filtered(category)
+        return {
+            "excluded_indices": [i for i, s in enumerate(filtered) if s["sample_id"] in excluded]
+        }
+    except Exception as e:
+        print(f"excluded_ids 오류: {e}")
+        return {"excluded_indices": []}
+    finally:
+        conn.close()
+
+
 @app.get("/progress")
 def progress(annotator: str = None, category: str = None):
     conn = get_db_conn()
@@ -527,21 +549,32 @@ def progress(annotator: str = None, category: str = None):
 
         done = 0
         if annotator:
-            # q1 IS NOT NULL 조건 추가: 제외 샘플은 진행도에서 제외
+            # 진행률 = 제출(q1 IS NOT NULL) + 제외(excluded_samples) 합산
             if category and category != "ALL":
                 done = cursor.execute("""
-                    SELECT COUNT(DISTINCT a.sample_id)
-                    FROM annotations a JOIN samples s ON a.sample_id = s.sample_id
-                    WHERE a.annotator=? AND LOWER(s.category)=LOWER(?)
-                      AND (a.round IS NULL OR a.round = 1)
-                      AND a.q1 IS NOT NULL
-                """, (annotator, category)).fetchone()[0]
+                    SELECT COUNT(DISTINCT sample_id) FROM (
+                        SELECT a.sample_id
+                        FROM annotations a JOIN samples s ON a.sample_id = s.sample_id
+                        WHERE a.annotator=? AND LOWER(s.category)=LOWER(?)
+                          AND (a.round IS NULL OR a.round = 1)
+                          AND a.q1 IS NOT NULL
+                        UNION
+                        SELECT es.sample_id
+                        FROM excluded_samples es JOIN samples s ON es.sample_id = s.sample_id
+                        WHERE es.annotator=? AND LOWER(s.category)=LOWER(?)
+                    )
+                """, (annotator, category, annotator, category)).fetchone()[0]
             else:
                 done = cursor.execute("""
-                    SELECT COUNT(DISTINCT sample_id) FROM annotations
-                    WHERE annotator=? AND (round IS NULL OR round = 1)
-                      AND q1 IS NOT NULL
-                """, (annotator,)).fetchone()[0]
+                    SELECT COUNT(DISTINCT sample_id) FROM (
+                        SELECT sample_id FROM annotations
+                        WHERE annotator=? AND (round IS NULL OR round = 1)
+                          AND q1 IS NOT NULL
+                        UNION
+                        SELECT sample_id FROM excluded_samples
+                        WHERE annotator=?
+                    )
+                """, (annotator, annotator)).fetchone()[0]
 
         return {"done": done, "total": total}
     except Exception as e:
@@ -565,22 +598,32 @@ def progress_detail(category: str = "ALL"):
         annotators = ["A", "B", "C", "D", "E"]
         result = {}
         for a in annotators:
-            # q1 IS NOT NULL 조건 추가
+            # 제출 + 제외 합산
             if category == "ALL":
                 done = cursor.execute("""
-                    SELECT COUNT(DISTINCT sample_id) FROM annotations
-                    WHERE annotator=? AND (round IS NULL OR round = 1)
-                      AND q1 IS NOT NULL
-                """, (a,)).fetchone()[0]
+                    SELECT COUNT(DISTINCT sample_id) FROM (
+                        SELECT sample_id FROM annotations
+                        WHERE annotator=? AND (round IS NULL OR round = 1)
+                          AND q1 IS NOT NULL
+                        UNION
+                        SELECT sample_id FROM excluded_samples
+                        WHERE annotator=?
+                    )
+                """, (a, a)).fetchone()[0]
             else:
                 done = cursor.execute("""
-                    SELECT COUNT(DISTINCT a.sample_id)
-                    FROM annotations a JOIN samples s ON a.sample_id = s.sample_id
-                    WHERE a.annotator=? AND LOWER(s.category)=LOWER(?)
-                      AND (a.round IS NULL OR a.round = 1)
-                      AND a.q1 IS NOT NULL
-                """, (a, category)).fetchone()[0]
-
+                    SELECT COUNT(DISTINCT sample_id) FROM (
+                        SELECT ann.sample_id
+                        FROM annotations ann JOIN samples s ON ann.sample_id = s.sample_id
+                        WHERE ann.annotator=? AND LOWER(s.category)=LOWER(?)
+                          AND (ann.round IS NULL OR ann.round = 1)
+                          AND ann.q1 IS NOT NULL
+                        UNION
+                        SELECT es.sample_id
+                        FROM excluded_samples es JOIN samples s ON es.sample_id = s.sample_id
+                        WHERE es.annotator=? AND LOWER(s.category)=LOWER(?)
+                    )
+                """, (a, category, a, category)).fetchone()[0]
             result[a] = {"done": done, "total": total}
         return result
     except Exception as e:
@@ -631,7 +674,6 @@ def get_discussion_samples():
 
         result = []
         for sid, anns in by_sample.items():
-            # q1=NULL(제외/미제출)인 행을 필터링 후 disagreement 판별
             valid_anns = [a for a in anns if a.get("q1") is not None]
             has_disagreement = any(a["final_label"] is not None for a in valid_anns)
             if not has_disagreement:
@@ -683,12 +725,17 @@ def admin_dashboard():
 
         progress_data = {}
         for a in annotators:
-            # q1 IS NOT NULL 조건 추가: 제외 샘플을 진행도에서 제외
+            # 대시보드 진행률도 제출 + 제외 합산
             done = cursor.execute("""
-                SELECT COUNT(DISTINCT sample_id) FROM annotations
-                WHERE annotator=? AND (round IS NULL OR round = 1)
-                  AND q1 IS NOT NULL
-            """, (a,)).fetchone()[0]
+                SELECT COUNT(DISTINCT sample_id) FROM (
+                    SELECT sample_id FROM annotations
+                    WHERE annotator=? AND (round IS NULL OR round = 1)
+                      AND q1 IS NOT NULL
+                    UNION
+                    SELECT sample_id FROM excluded_samples
+                    WHERE annotator=?
+                )
+            """, (a, a)).fetchone()[0]
 
             progress_data[a] = {
                 "done": done, "total": total,
@@ -703,15 +750,20 @@ def admin_dashboard():
             ).fetchone()[0]
             cat_done = {}
             for a in annotators:
-                # q1 IS NOT NULL 조건 추가
+                # 카테고리별도 제출 + 제외 합산
                 done = cursor.execute("""
-                    SELECT COUNT(DISTINCT a.sample_id)
-                    FROM annotations a JOIN samples s ON a.sample_id = s.sample_id
-                    WHERE a.annotator=? AND s.category=?
-                      AND (a.round IS NULL OR a.round = 1)
-                      AND a.q1 IS NOT NULL
-                """, (a, cat)).fetchone()[0]
-
+                    SELECT COUNT(DISTINCT sample_id) FROM (
+                        SELECT ann.sample_id
+                        FROM annotations ann JOIN samples s ON ann.sample_id = s.sample_id
+                        WHERE ann.annotator=? AND s.category=?
+                          AND (ann.round IS NULL OR ann.round = 1)
+                          AND ann.q1 IS NOT NULL
+                        UNION
+                        SELECT es.sample_id
+                        FROM excluded_samples es JOIN samples s ON es.sample_id = s.sample_id
+                        WHERE es.annotator=? AND s.category=?
+                    )
+                """, (a, cat, a, cat)).fetchone()[0]
                 cat_done[a] = done
             category_data[cat] = {"total": cat_total, "by_annotator": cat_done}
 
@@ -785,8 +837,7 @@ def db_query(
                     "sample_id": r[0],
                     "annotator": r[1],
                     "final_label": r[2],
-                    # DB 조회에서 q1 표시: NULL=제외, 1=O, 0=X
-                    "q1": r[3],   # 0=X제출, 1=O제출, None=제외/미제출
+                    "q1": r[3],
                     "round": r[4] if r[4] is not None else 1
                 }
                 for r in rows
@@ -826,10 +877,6 @@ def get_all_annotations(annotator: str = None):
 
 @app.get("/export/csv")
 def export_csv():
-    """
-    Raw CSV 내보내기: round 컬럼 제외, q1은 0/1/None으로 출력
-    - q1=1: O 제출, q1=0: X 제출, q1=None: 제외 샘플
-    """
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
@@ -841,12 +888,7 @@ def export_csv():
         writer = csv.writer(output)
         writer.writerow(["sample_id", "annotator", "q1", "final_label"])
         for r in rows:
-            writer.writerow([
-                r[0],           # sample_id
-                r[1],           # annotator
-                r[3],           # q1: 1=O, 0=X, None=제외
-                r[2],           # final_label: X 제출 시 F/C/M, 나머지 None
-            ])
+            writer.writerow([r[0], r[1], r[3], r[2]])
         output.seek(0)
         return StreamingResponse(
             output, media_type="text/csv",
@@ -858,10 +900,6 @@ def export_csv():
 
 @app.get("/export/json")
 def export_json():
-    """
-    Raw JSON 내보내기: round 필드 제외, q1은 0/1/None으로 출력
-    - q1=1: O 제출, q1=0: X 제출, q1=None: 제외 샘플
-    """
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
@@ -869,17 +907,10 @@ def export_json():
             SELECT sample_id, annotator, final_label, q1
             FROM annotations ORDER BY sample_id, annotator
         """).fetchall()
-        # round 필드 제거, q1/final_label 순서 정렬
         data = [
-            {
-                "sample_id": r[0],
-                "annotator": r[1],
-                "q1": r[3],         # 1=O, 0=X, None=제외
-                "final_label": r[2] # X 제출 시 F/C/M, 나머지 None
-            }
+            {"sample_id": r[0], "annotator": r[1], "q1": r[3], "final_label": r[2]}
             for r in rows
         ]
-
         output = io.StringIO()
         json.dump(data, output, ensure_ascii=False, indent=2)
         output.seek(0)
@@ -934,10 +965,6 @@ def get_samples_list():
 
 @app.post("/restore")
 async def restore_annotations(request: dict):
-    """
-    복원 로직: q1=0/1로 저장, round 없는 데이터도 처리 가능
-    - q1=1 → O 제출, q1=0 → X 제출, q1=None → 제외 샘플
-    """
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
@@ -945,11 +972,7 @@ async def restore_annotations(request: dict):
         count = 0
         for row in rows:
             q1_val = row.get("q1")
-            # q1 복원: 0/1/None 그대로 사용
-            if q1_val is None:
-                q1_int = None       # 제외 샘플
-            else:
-                q1_int = int(q1_val)  # 0=X, 1=O
+            q1_int = None if q1_val is None else int(q1_val)
 
             exists = cursor.execute("""
                 SELECT COUNT(*) FROM annotations
@@ -977,7 +1000,6 @@ async def restore_annotations(request: dict):
 
 @app.post("/set_final_label")
 def set_final_label(data: dict):
-    """Disagreement 해소 시 최종 라벨 수동 지정"""
     sample_id = data.get("sample_id")
     final_label = data.get("final_label")
     if not sample_id or final_label not in ("F", "C", "M"):
@@ -1000,7 +1022,6 @@ def set_final_label(data: dict):
 
 @app.delete("/set_final_label")
 def delete_final_label(sample_id: str = Query(...)):
-    """Disagreement 해소 취소"""
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
