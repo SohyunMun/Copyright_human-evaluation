@@ -285,7 +285,6 @@ function DiscussionPage({ onBack, allSamples }) {
                         key={i}
                         style={{
                           borderBottom: '1px solid #f1f5f9',
-                          // q1=0(X 제출)일 때 빨간 배경
                           background: a.q1 === 0 ? '#fef2f2' : 'white',
                         }}
                       >
@@ -294,7 +293,6 @@ function DiscussionPage({ onBack, allSamples }) {
                           style={{
                             padding: '5px 8px',
                             textAlign: 'center',
-                            // q1=1 → O(초록), q1=0 → X(빨강)
                             color: a.q1 === 1 ? '#16a34a' : '#dc2626',
                             fontWeight: 700,
                           }}
@@ -356,7 +354,6 @@ function DiscussionPage({ onBack, allSamples }) {
                 </div>
               )}
 
-              {/* 최종 라벨 결정 UI */}
               <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
                 <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>최종 라벨 결정</p>
                 <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
@@ -624,7 +621,6 @@ function AdminPage({ onBack }) {
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                         <thead>
                           <tr style={{ background: '#f1f5f9' }}>
-                            {/* DB 조회 헤더: round 제거, Q1 컬럼 설명 변경 ── */}
                             {['Sample ID', 'Ann', 'O/X', 'Label'].map((h) => (
                               <th
                                 key={h}
@@ -633,7 +629,6 @@ function AdminPage({ onBack }) {
                                 {h}
                               </th>
                             ))}
-                            {/* ────────────────────────────────────────────────────── */}
                           </tr>
                         </thead>
                         <tbody>
@@ -641,7 +636,6 @@ function AdminPage({ onBack }) {
                             <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                               <td style={{ padding: '3px 6px' }}>{row.sample_id}</td>
                               <td style={{ padding: '3px 6px' }}>{row.annotator}</td>
-                              {/* q1=1→O, q1=0→X, null→🚫 제외로 표시*/}
                               <td
                                 style={{
                                   padding: '3px 6px',
@@ -651,7 +645,6 @@ function AdminPage({ onBack }) {
                               >
                                 {row.q1 === 1 ? 'O' : row.q1 === 0 ? 'X' : '🚫 제외'}
                               </td>
-                              {/* ─────────────────────────────────────────────────────── */}
                               <td
                                 style={{
                                   padding: '3px 6px',
@@ -703,9 +696,7 @@ function AdminPage({ onBack }) {
             <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 12, color: '#111827' }}>
               🗂️ Raw 어노테이션 (개별 응답 전체)
             </div>
-            {/* 내보내기 : round 제거, q1=0/1 설명 추가 */}
             <div>모든 어노테이터의 개별 응답 (q1: 1=O동의, 0=X비동의, 없음=제외)</div>
-            {/* ──────────────────────────────────────────────────────────────────── */}
             <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
               <a
                 href={`${BASE_URL}/export/csv`}
@@ -743,7 +734,10 @@ function App() {
   const [currentStep, setCurrentStep] = useState(1);
   const [total, setTotal] = useState(1);
   const [category, setCategory] = useState('ALL');
+
+  // submittedSampleIds: 어노테이터별 실제 제출 목록 — 어노테이터 변경 시 백엔드와 동기화
   const [submittedSampleIds, setSubmittedSampleIds] = useState(new Set());
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [allSamples, setAllSamples] = useState([]);
   const [jumpOpen, setJumpOpen] = useState(false);
@@ -760,13 +754,24 @@ function App() {
     setLabel('');
   };
 
-  /*
-   * loadAnnotation: q1 값으로 O/X 버튼 상태 복원
-   * 백엔드가 q1 기반으로 is_correct를 내려주므로 그대로 사용
-   *   - is_correct=true  → O 버튼 활성화 (q1=1)
-   *   - is_correct=false → X 버튼 활성화 + final_label 복원 (q1=0)
-   *   - is_correct=null  → 미제출/제외 → 초기화 (q1=NULL)
-   */
+  // /submitted_ids(category=ALL)로 조회한 인덱스 배열을 샘플 목록 기준 sample_id Set으로 변환
+  // allSamples를 인자로 받아야 초기 로드처럼 state 업데이트 전에도 사용 가능
+  const buildSubmittedSet = useCallback(async (ann, samplesSnapshot) => {
+    if (!ann) {
+      setSubmittedSampleIds(new Set());
+      return;
+    }
+    try {
+      const res = await axios.get(`${BASE_URL}/submitted_ids?annotator=${ann}&category=ALL`);
+      const indices = new Set(res.data.submitted_indices);
+      // submitted_indices는 전체 샘플 기준 인덱스이므로 samplesSnapshot으로 변환
+      const ids = new Set(samplesSnapshot.filter((_, i) => indices.has(i)).map((s) => s.sample_id));
+      setSubmittedSampleIds(ids);
+    } catch {
+      setSubmittedSampleIds(new Set());
+    }
+  }, []);
+
   const loadAnnotation = useCallback(
     async (sampleData, ann) => {
       const a = ann ?? annotator;
@@ -781,14 +786,11 @@ function App() {
         const { is_correct, final_label } = res.data;
 
         if (is_correct === null || is_correct === undefined) {
-          // 미제출 또는 제외 → 초기화
           resetState();
         } else if (is_correct === true) {
-          // O 제출 (q1=1) → O 버튼 복원
           setIsCorrect(true);
           setLabel('');
         } else {
-          // X 제출 (q1=0) → X 버튼 + 라벨 복원
           setIsCorrect(false);
           setLabel(final_label || '');
         }
@@ -822,6 +824,7 @@ function App() {
   const fetchAllSamples = useCallback(async () => {
     const res = await axios.get(`${BASE_URL}/samples`);
     setAllSamples(res.data);
+    return res.data; // 초기 로드 시 buildSubmittedSet에 넘기기 위해 반환
   }, []);
 
   const fetchClassification = useCallback(async () => {
@@ -841,9 +844,16 @@ function App() {
 
   useEffect(() => {
     const saved = localStorage.getItem('annotator');
-    fetchAllSamples();
     fetchClassification();
     fetchDiscussionCount();
+
+    // 초기 로드: allSamples를 먼저 확보한 뒤 제출 목록을 동기화
+    // fetchAllSamples()가 반환하는 samples 배열을 buildSubmittedSet에 직접 전달해 setAllSamples state 반영 타이밍과 무관하게 정확히 변환할 수 있게 함
+    fetchAllSamples().then((samples) => {
+      if (saved) {
+        buildSubmittedSet(saved, samples);
+      }
+    });
 
     if (saved) {
       fetchProgress(saved, 'ALL');
@@ -868,6 +878,11 @@ function App() {
     setAnnotator(a);
     localStorage.setItem('annotator', a);
     fetchProgress(a, category);
+
+    // 어노테이터 변경 시 submittedSampleIds를 해당 어노테이터의 실제 제출 목록으로 교체
+    // /submitted_ids?annotator=새어노테이터 호출 → 인덱스→sample_id 변환 → Set 교체
+    await buildSubmittedSet(a, allSamples);
+
     const res = await axios.get(`${BASE_URL}/last_index?annotator=${a}&category=${category}`);
     const data = await fetchSampleByIndex(res.data.last_index, category);
     await loadAnnotation(data, a);
@@ -902,12 +917,11 @@ function App() {
         sample_id: sample.sample_id,
         annotator,
         is_correct: isCorrect,
-        // O 제출 시 final_label=null, X 제출 시 선택한 라벨 전송
         final_label: isCorrect === false ? label : null,
         round: 1,
       });
 
-      // 제출 성공 시 submittedSampleIds에 추가
+      // 제출 성공 시 현재 sample_id를 기존 Set에 추가 (어노테이터 유지 중 연속 작업)
       setSubmittedSampleIds((prev) => {
         const newSet = new Set(prev);
         newSet.add(sample.sample_id);
@@ -951,7 +965,6 @@ function App() {
       await axios.post(`${BASE_URL}/exclude`, { sample_id: sample.sample_id, annotator });
       fetchProgress(annotator, category);
       fetchClassification();
-      // 제외 후 O/X 상태 초기화
       resetState();
       if (currentStep < total) await nextSample();
       else alert('제외 처리 완료');
@@ -1133,6 +1146,7 @@ function App() {
                 >
                   {jumpList.map((s) => {
                     const globalIdx = allSamples.findIndex((o) => o.sample_id === s.sample_id);
+                    // 백엔드와 동기화된 submittedSampleIds 기준으로 ✅ 표시
                     const mySubmitted = annotator && submittedSampleIds.has(s.sample_id);
                     const clf = sampleClassification[s.sample_id];
                     const mark =
