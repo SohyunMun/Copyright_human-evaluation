@@ -7,7 +7,6 @@ const ANNOTATORS = ['A', 'B', 'C', 'D', 'E'];
 
 const FIXED_CATEGORIES = ['ALL', 'business', 'entertainment', 'politics', 'sport', 'tech'];
 
-// [FIX 2] excluded 상태 추가
 const STATUS_LABELS = {
   confirmed: { text: '✅ 확정 (모두 O)', color: '#16a34a' },
   discussion_resolved: { text: '✅ Disagreement Resolved', color: '#2563eb' },
@@ -233,7 +232,7 @@ function DiscussionPage({ onBack, allSamples }) {
                       </div>
                       <div style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>
                         {item.annotations
-                          .map((a) => `${a.annotator}:${a.q1}점${a.label ? `(${a.label})` : ''}`)
+                          .map((a) => `${a.annotator}:${a.q1 === 1 ? 'O' : 'X'}${a.label ? `(${a.label})` : ''}`)
                           .join(' ')}
                       </div>
                     </div>
@@ -276,7 +275,7 @@ function DiscussionPage({ onBack, allSamples }) {
                   <thead>
                     <tr style={{ background: '#f1f5f9' }}>
                       <th style={{ padding: '5px 8px', textAlign: 'left' }}>Annotator</th>
-                      <th style={{ padding: '5px 8px', textAlign: 'center' }}>Q1 점수</th>
+                      <th style={{ padding: '5px 8px', textAlign: 'center' }}>O/X</th>
                       <th style={{ padding: '5px 8px', textAlign: 'center' }}>선택 라벨</th>
                     </tr>
                   </thead>
@@ -286,7 +285,8 @@ function DiscussionPage({ onBack, allSamples }) {
                         key={i}
                         style={{
                           borderBottom: '1px solid #f1f5f9',
-                          background: a.is_correct === false ? '#fef2f2' : 'white',
+                          // q1=0(X 제출)일 때 빨간 배경
+                          background: a.q1 === 0 ? '#fef2f2' : 'white',
                         }}
                       >
                         <td style={{ padding: '5px 8px', fontWeight: 600 }}>Annotator {a.annotator}</td>
@@ -294,11 +294,12 @@ function DiscussionPage({ onBack, allSamples }) {
                           style={{
                             padding: '5px 8px',
                             textAlign: 'center',
-                            color: a.is_correct === false ? '#dc2626' : '#16a34a',
+                            // q1=1 → O(초록), q1=0 → X(빨강)
+                            color: a.q1 === 1 ? '#16a34a' : '#dc2626',
                             fontWeight: 700,
                           }}
                         >
-                          {a.is_correct ? 'O' : 'X'}
+                          {a.q1 === 1 ? 'O' : 'X'}
                         </td>
                         <td
                           style={{
@@ -354,6 +355,44 @@ function DiscussionPage({ onBack, allSamples }) {
                   <p style={{ fontSize: 13, color: '#6b7280' }}>{sampleDetail.next || '—'}</p>
                 </div>
               )}
+
+              {/* 최종 라벨 결정 UI */}
+              <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
+                <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>최종 라벨 결정</p>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                  {['F', 'C', 'M'].map((l) => (
+                    <button
+                      key={l}
+                      onClick={() => setDecidedLabel(l)}
+                      className={`label-btn ${decidedLabel === l ? 'active' : ''}`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="submit-btn" onClick={submitDecision} style={{ flex: 1 }}>
+                    확정
+                  </button>
+                  {selected.resolved && (
+                    <button
+                      onClick={cancelDecision}
+                      style={{
+                        background: '#fee2e2',
+                        color: '#dc2626',
+                        border: 'none',
+                        borderRadius: 8,
+                        padding: '8px 14px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        fontSize: 13,
+                      }}
+                    >
+                      취소
+                    </button>
+                  )}
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -585,7 +624,8 @@ function AdminPage({ onBack }) {
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                         <thead>
                           <tr style={{ background: '#f1f5f9' }}>
-                            {['Sample ID', 'Ann', 'Label', 'Q1'].map((h) => (
+                            {/* DB 조회 헤더: round 제거, Q1 컬럼 설명 변경 ── */}
+                            {['Sample ID', 'Ann', 'O/X', 'Label'].map((h) => (
                               <th
                                 key={h}
                                 style={{ padding: '4px 6px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}
@@ -593,6 +633,7 @@ function AdminPage({ onBack }) {
                                 {h}
                               </th>
                             ))}
+                            {/* ────────────────────────────────────────────────────── */}
                           </tr>
                         </thead>
                         <tbody>
@@ -600,6 +641,17 @@ function AdminPage({ onBack }) {
                             <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                               <td style={{ padding: '3px 6px' }}>{row.sample_id}</td>
                               <td style={{ padding: '3px 6px' }}>{row.annotator}</td>
+                              {/* q1=1→O, q1=0→X, null→🚫 제외로 표시*/}
+                              <td
+                                style={{
+                                  padding: '3px 6px',
+                                  fontWeight: 700,
+                                  color: row.q1 === 1 ? '#16a34a' : row.q1 === 0 ? '#dc2626' : '#9ca3af',
+                                }}
+                              >
+                                {row.q1 === 1 ? 'O' : row.q1 === 0 ? 'X' : '🚫 제외'}
+                              </td>
+                              {/* ─────────────────────────────────────────────────────── */}
                               <td
                                 style={{
                                   padding: '3px 6px',
@@ -614,7 +666,6 @@ function AdminPage({ onBack }) {
                               >
                                 {row.final_label || '-'}
                               </td>
-                              <td style={{ padding: '3px 6px' }}>{row.q1 ?? '🚫 제외'}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -652,7 +703,9 @@ function AdminPage({ onBack }) {
             <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 12, color: '#111827' }}>
               🗂️ Raw 어노테이션 (개별 응답 전체)
             </div>
-            <div>모든 어노테이터의 개별 응답 (제외 샘플은 q1=null로 표시)</div>
+            {/* 내보내기 : round 제거, q1=0/1 설명 추가 */}
+            <div>모든 어노테이터의 개별 응답 (q1: 1=O동의, 0=X비동의, 없음=제외)</div>
+            {/* ──────────────────────────────────────────────────────────────────── */}
             <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
               <a
                 href={`${BASE_URL}/export/csv`}
@@ -707,10 +760,13 @@ function App() {
     setLabel('');
   };
 
-  // [FIX 1] loadAnnotation: 백엔드 /annotation의 is_correct 필드로 O/X 버튼 상태 복원
-  // - is_correct=true  → O 버튼 활성화
-  // - is_correct=false → X 버튼 활성화 + final_label 복원
-  // - is_correct=null  → 미제출/제외이므로 초기화
+  /*
+   * loadAnnotation: q1 값으로 O/X 버튼 상태 복원
+   * 백엔드가 q1 기반으로 is_correct를 내려주므로 그대로 사용
+   *   - is_correct=true  → O 버튼 활성화 (q1=1)
+   *   - is_correct=false → X 버튼 활성화 + final_label 복원 (q1=0)
+   *   - is_correct=null  → 미제출/제외 → 초기화 (q1=NULL)
+   */
   const loadAnnotation = useCallback(
     async (sampleData, ann) => {
       const a = ann ?? annotator;
@@ -725,14 +781,14 @@ function App() {
         const { is_correct, final_label } = res.data;
 
         if (is_correct === null || is_correct === undefined) {
-          // 미제출 또는 제외 샘플 → 초기화
+          // 미제출 또는 제외 → 초기화
           resetState();
         } else if (is_correct === true) {
-          // O 제출 → O 버튼 복원
+          // O 제출 (q1=1) → O 버튼 복원
           setIsCorrect(true);
           setLabel('');
         } else {
-          // X 제출 → X 버튼 + 선택한 라벨 복원
+          // X 제출 (q1=0) → X 버튼 + 라벨 복원
           setIsCorrect(false);
           setLabel(final_label || '');
         }
@@ -846,18 +902,21 @@ function App() {
         sample_id: sample.sample_id,
         annotator,
         is_correct: isCorrect,
+        // O 제출 시 final_label=null, X 제출 시 선택한 라벨 전송
         final_label: isCorrect === false ? label : null,
         round: 1,
       });
-      fetchProgress(annotator, category);
-      fetchClassification();
-      fetchDiscussionCount();
 
+      // 제출 성공 시 submittedSampleIds에 추가
       setSubmittedSampleIds((prev) => {
         const newSet = new Set(prev);
         newSet.add(sample.sample_id);
         return newSet;
       });
+
+      fetchProgress(annotator, category);
+      fetchClassification();
+      fetchDiscussionCount();
 
       if (currentStep < total) {
         await nextSample();
@@ -892,6 +951,8 @@ function App() {
       await axios.post(`${BASE_URL}/exclude`, { sample_id: sample.sample_id, annotator });
       fetchProgress(annotator, category);
       fetchClassification();
+      // 제외 후 O/X 상태 초기화
+      resetState();
       if (currentStep < total) await nextSample();
       else alert('제외 처리 완료');
     } catch {
@@ -965,7 +1026,6 @@ function App() {
             </span>
             <span style={{ fontSize: 13, color: '#6b7280' }}>Article: {sample.article_id}</span>
             <span className="llm-big">LLM: {sample.predicted}</span>
-            {/* [FIX 2] excluded 포함 모든 상태 뱃지 — STATUS_LABELS에 excluded 추가됨 */}
             {currentStatus && STATUS_LABELS[currentStatus.status] && (
               <span
                 className="status-badge"
