@@ -469,7 +469,9 @@ function AdminPage({ onBack }) {
                   {p.done} / {p.total} ({p.percent}%)
                 </span>
                 {(adminData.excluded_by_annotator?.[a] || 0) > 0 && (
-                  <span style={{ fontSize: 11, color: '#6b7280' }}>🚫 {adminData.excluded_by_annotator[a]}개 제외</span>
+                  <span style={{ fontSize: 11, color: '#6b7280' }}>
+                    🚫 {adminData.excluded_by_annotator[a]}개 제외 포함
+                  </span>
                 )}
               </div>
             );
@@ -486,6 +488,7 @@ function AdminPage({ onBack }) {
               }}
             >
               🚫 제외된 샘플 (1명 이상 제외): <strong>{adminData.excluded_sample_count}개</strong>
+              <span style={{ marginLeft: 6, color: '#9ca3af' }}>(진행률에 포함, 최종 데이터셋에서는 제외)</span>
             </div>
           )}
 
@@ -535,10 +538,10 @@ function AdminPage({ onBack }) {
               <div className="classification-guide">
                 <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 12 }}>분류 기준 안내</div>
                 <div>
-                  • <strong>확정</strong>: 모든 annotator가 O 선택 → LLM 라벨 확정
+                  • <strong>확정</strong>: 과반수 동일 라벨 → 자동 확정
                 </div>
                 <div>
-                  • <strong>Disagreement Set</strong>: 1명 이상 X 선택 → 어노테이터 합의 필요
+                  • <strong>Disagreement Set</strong>: 과반수 미달 → 수동 합의 필요
                 </div>
                 <div>
                   • <strong>Disagreement Resolved</strong>: 최종 라벨 결정됨
@@ -735,8 +738,12 @@ function App() {
   const [total, setTotal] = useState(1);
   const [category, setCategory] = useState('ALL');
 
-  // submittedSampleIds: 어노테이터별 실제 제출 목록 — 어노테이터 변경 시 백엔드와 동기화
+  // 제출 완료 샘플 ID Set
   const [submittedSampleIds, setSubmittedSampleIds] = useState(new Set());
+
+  // 제외 샘플 ID Set — 별도로 관리해 샘플 목록 🚫 표시에 사용
+  // 어노테이터 변경 시 /excluded_ids 호출로 해당 어노테이터의 제외 목록을 Set으로 교체
+  const [excludedSampleIds, setExcludedSampleIds] = useState(new Set());
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [allSamples, setAllSamples] = useState([]);
@@ -754,21 +761,31 @@ function App() {
     setLabel('');
   };
 
-  // /submitted_ids(category=ALL)로 조회한 인덱스 배열을 샘플 목록 기준 sample_id Set으로 변환
-  // allSamples를 인자로 받아야 초기 로드처럼 state 업데이트 전에도 사용 가능
-  const buildSubmittedSet = useCallback(async (ann, samplesSnapshot) => {
+  // 제출 목록(submitted) + 제외 목록(excluded) 동시 동기화
+  const buildAnnotatorSets = useCallback(async (ann, samplesSnapshot) => {
     if (!ann) {
       setSubmittedSampleIds(new Set());
+      setExcludedSampleIds(new Set());
       return;
     }
     try {
-      const res = await axios.get(`${BASE_URL}/submitted_ids?annotator=${ann}&category=ALL`);
-      const indices = new Set(res.data.submitted_indices);
-      // submitted_indices는 전체 샘플 기준 인덱스이므로 samplesSnapshot으로 변환
-      const ids = new Set(samplesSnapshot.filter((_, i) => indices.has(i)).map((s) => s.sample_id));
-      setSubmittedSampleIds(ids);
+      const [submittedRes, excludedRes] = await Promise.all([
+        axios.get(`${BASE_URL}/submitted_ids?annotator=${ann}&category=ALL`),
+        axios.get(`${BASE_URL}/excluded_ids?annotator=${ann}&category=ALL`),
+      ]);
+
+      const submittedIndices = new Set(submittedRes.data.submitted_indices);
+      const excludedIndices = new Set(excludedRes.data.excluded_indices);
+
+      // 인덱스 → sample_id 변환
+      const submittedIds = new Set(samplesSnapshot.filter((_, i) => submittedIndices.has(i)).map((s) => s.sample_id));
+      const excludedIds = new Set(samplesSnapshot.filter((_, i) => excludedIndices.has(i)).map((s) => s.sample_id));
+
+      setSubmittedSampleIds(submittedIds);
+      setExcludedSampleIds(excludedIds);
     } catch {
       setSubmittedSampleIds(new Set());
+      setExcludedSampleIds(new Set());
     }
   }, []);
 
@@ -824,7 +841,7 @@ function App() {
   const fetchAllSamples = useCallback(async () => {
     const res = await axios.get(`${BASE_URL}/samples`);
     setAllSamples(res.data);
-    return res.data; // 초기 로드 시 buildSubmittedSet에 넘기기 위해 반환
+    return res.data;
   }, []);
 
   const fetchClassification = useCallback(async () => {
@@ -847,11 +864,10 @@ function App() {
     fetchClassification();
     fetchDiscussionCount();
 
-    // 초기 로드: allSamples를 먼저 확보한 뒤 제출 목록을 동기화
-    // fetchAllSamples()가 반환하는 samples 배열을 buildSubmittedSet에 직접 전달해 setAllSamples state 반영 타이밍과 무관하게 정확히 변환할 수 있게 함
+    // 초기 로드: allSamples 확보 후 제출/제외 목록 동기화
     fetchAllSamples().then((samples) => {
       if (saved) {
-        buildSubmittedSet(saved, samples);
+        buildAnnotatorSets(saved, samples);
       }
     });
 
@@ -879,9 +895,8 @@ function App() {
     localStorage.setItem('annotator', a);
     fetchProgress(a, category);
 
-    // 어노테이터 변경 시 submittedSampleIds를 해당 어노테이터의 실제 제출 목록으로 교체
-    // /submitted_ids?annotator=새어노테이터 호출 → 인덱스→sample_id 변환 → Set 교체
-    await buildSubmittedSet(a, allSamples);
+    // 어노테이터 변경 시 제출 + 제외 목록 모두 교체
+    await buildAnnotatorSets(a, allSamples);
 
     const res = await axios.get(`${BASE_URL}/last_index?annotator=${a}&category=${category}`);
     const data = await fetchSampleByIndex(res.data.last_index, category);
@@ -921,7 +936,7 @@ function App() {
         round: 1,
       });
 
-      // 제출 성공 시 현재 sample_id를 기존 Set에 추가 (어노테이터 유지 중 연속 작업)
+      // 제출 성공 시 현재 sample_id를 제출 Set에 추가
       setSubmittedSampleIds((prev) => {
         const newSet = new Set(prev);
         newSet.add(sample.sample_id);
@@ -963,6 +978,14 @@ function App() {
     if (!window.confirm('이 샘플을 제외하시겠습니까?\n제외하면 최종 데이터셋에 포함되지 않습니다.')) return;
     try {
       await axios.post(`${BASE_URL}/exclude`, { sample_id: sample.sample_id, annotator });
+
+      // 제외 성공 시 excludedSampleIds Set에 추가해 샘플 목록 즉시 동기화
+      setExcludedSampleIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.add(sample.sample_id);
+        return newSet;
+      });
+
       fetchProgress(annotator, category);
       fetchClassification();
       resetState();
@@ -1146,19 +1169,23 @@ function App() {
                 >
                   {jumpList.map((s) => {
                     const globalIdx = allSamples.findIndex((o) => o.sample_id === s.sample_id);
-                    // 백엔드와 동기화된 submittedSampleIds 기준으로 ✅ 표시
-                    const mySubmitted = annotator && submittedSampleIds.has(s.sample_id);
+
+                    // 샘플 목록 아이콘 결정 로직 수정
+                    const isMyExcluded = annotator && excludedSampleIds.has(s.sample_id);
+                    const isMySubmitted = annotator && submittedSampleIds.has(s.sample_id);
                     const clf = sampleClassification[s.sample_id];
-                    const mark =
-                      clf?.status === 'excluded'
-                        ? '🚫'
-                        : mySubmitted
-                          ? '✅'
-                          : clf?.status === 'needs_discussion'
-                            ? '⚠️'
-                            : clf?.status === 'discussion_resolved'
-                              ? '💬'
-                              : '⬜';
+
+                    const mark = isMyExcluded
+                      ? '🚫' // 현재 어노테이터가 제외한 샘플
+                      : isMySubmitted
+                        ? '✅' // 현재 어노테이터가 제출 완료
+                        : clf?.status === 'needs_discussion'
+                          ? '⚠️' // 전체 기준 disagreement
+                          : clf?.status === 'discussion_resolved'
+                            ? '💬' // 전체 기준 resolved
+                            : '⬜'; // 미제출
+                    // ──────────────────────────────────────────────────────────
+
                     return (
                       <option key={s.sample_id} value={globalIdx}>
                         {mark} {s.sample_id}
