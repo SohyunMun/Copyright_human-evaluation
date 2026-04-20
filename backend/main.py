@@ -53,11 +53,14 @@ def get_all_samples():
 def _migrate_db():
     conn = get_db_conn()
     try:
+        # round 컬럼 추가
         try:
             conn.execute("ALTER TABLE annotations ADD COLUMN round INTEGER DEFAULT 1")
             conn.commit()
         except Exception:
             pass
+
+        # excluded_samples 테이블
         conn.execute("""
             CREATE TABLE IF NOT EXISTS excluded_samples (
                 sample_id TEXT,
@@ -68,6 +71,20 @@ def _migrate_db():
         """)
         conn.commit()
 
+        # ── sample_decisions 테이블 생성 ────────────────────────────────
+        # CREATE TABLE IF NOT EXISTS로 항상 안전하게 생성 보장
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS sample_decisions (
+                sample_id TEXT PRIMARY KEY,
+                final_label TEXT,
+                decided_at TEXT
+            )
+        """)
+        conn.commit()
+        print("[migrate] sample_decisions 테이블 확인/생성 완료")
+        # ──────────────────────────────────────────────────────────────────────
+
+        # 기존 q1=NULL 데이터 마이그레이션 (O 제출이었던 행 → q1=1)
         conn.execute("""
             UPDATE annotations
             SET q1 = 1
@@ -102,10 +119,7 @@ def startup():
 
 def get_filtered(category):
     if category and category != "ALL":
-        return [
-            s for s in samples
-            if s["category"].lower() == category.lower()
-        ]
+        return [s for s in samples if s["category"].lower() == category.lower()]
     return samples
 
 
@@ -150,35 +164,30 @@ def _get_all_annotations_raw(conn):
 
 
 def _get_decisions(conn):
+    """sample_decisions 테이블에서 수동 확정 라벨 조회"""
     cursor = conn.cursor()
     try:
         rows = cursor.execute("SELECT sample_id, final_label FROM sample_decisions").fetchall()
         return {r[0]: r[1] for r in rows}
-    except Exception:
+    except Exception as e:
+        # 테이블이 없는 경우 등 방어
+        print(f"_get_decisions 오류: {e}")
         return {}
 
 
 def _get_excluded_samples(conn):
     cursor = conn.cursor()
-    rows = cursor.execute("""
-        SELECT DISTINCT sample_id FROM excluded_samples
-    """).fetchall()
+    rows = cursor.execute("SELECT DISTINCT sample_id FROM excluded_samples").fetchall()
     return set(r[0] for r in rows)
 
 
 def _classify_samples(all_annotations, conn_external=None):
     """
-    분류 로직
+    샘플 분류 로직
 
-    [FIX 2] decisions를 항상 DB에서 직접 로드
-    이전: decisions 파라미터를 받지만 기본값 {}로 빈 dict를 쓰거나,
-          호출부에서 _get_decisions()를 따로 호출해야 했음
-          → 호출부가 decisions를 넘기지 않으면 sample_decisions 테이블이 무시됨
-          → set_final_label로 저장한 수동 확정 라벨이 반영되지 않았음
-    수정: 함수 내부에서 항상 _get_decisions(conn)로 DB를 직접 읽어 decisions를 확보
-          → 어떤 호출부에서든 수동 확정 라벨이 항상 반영됨
+    decisions(수동 확정 라벨)를 항상 DB에서 직접 로드해 반영.
+    conn_external이 있으면 재사용, 없으면 새 연결을 열고 닫음.
     """
-    # DB 연결: 외부에서 넘겨준 conn이 있으면 재사용, 없으면 새로 생성
     if conn_external is not None:
         excluded = _get_excluded_samples(conn_external)
         decisions = _get_decisions(conn_external)
@@ -192,7 +201,6 @@ def _classify_samples(all_annotations, conn_external=None):
 
     predicted_map = {s["sample_id"]: s.get("predicted") for s in samples}
     by_sample = defaultdict(list)
-
     for ann in all_annotations:
         by_sample[ann["sample_id"]].append(ann)
 
@@ -204,12 +212,8 @@ def _classify_samples(all_annotations, conn_external=None):
             results[sid] = {"status": "excluded", "confirmed_label": None}
             continue
 
-        # 수동 확정 라벨 반영
         if sid in decisions:
-            results[sid] = {
-                "status": "discussion_resolved",
-                "confirmed_label": decisions[sid]
-            }
+            results[sid] = {"status": "discussion_resolved", "confirmed_label": decisions[sid]}
             continue
 
         predicted = predicted_map.get(sid)
@@ -218,12 +222,7 @@ def _classify_samples(all_annotations, conn_external=None):
         for a in anns:
             if a.get("q1") is None:
                 continue
-
-            if a["final_label"] is None:
-                label = predicted
-            else:
-                label = a["final_label"]
-
+            label = a["final_label"] if a["final_label"] else predicted
             if label in ("F", "C", "M"):
                 labels.append(label)
 
@@ -235,22 +234,15 @@ def _classify_samples(all_annotations, conn_external=None):
         top_label, top_count = counter.most_common(1)[0]
 
         if top_count > len(labels) / 2:
-            results[sid] = {
-                "status": "confirmed",
-                "confirmed_label": top_label
-            }
+            results[sid] = {"status": "confirmed", "confirmed_label": top_label}
         else:
-            results[sid] = {
-                "status": "needs_discussion",
-                "confirmed_label": None
-            }
+            results[sid] = {"status": "needs_discussion", "confirmed_label": None}
 
     return results
 
 
 def _build_iaa_data(conn):
     predicted_map = {s["sample_id"]: s.get("predicted") for s in samples}
-
     cursor = conn.cursor()
     rows = cursor.execute("""
         SELECT sample_id, annotator, final_label, q1 FROM annotations
@@ -258,36 +250,19 @@ def _build_iaa_data(conn):
     """).fetchall()
 
     label_dict = defaultdict(list)
-
     for sample_id, annotator, label, q1 in rows:
         if q1 is None:
             continue
-
-        if label is None:
-            effective_label = predicted_map.get(sample_id)
-        else:
-            effective_label = label
-
+        effective_label = label if label else predicted_map.get(sample_id)
         if effective_label in ("F", "C", "M"):
             label_dict[sample_id].append((annotator, effective_label))
 
-    label_filtered = {
-        sid: items for sid, items in label_dict.items()
-        if len(set(a for a, _ in items)) >= 3
-    }
-
-    return label_filtered
+    return {sid: items for sid, items in label_dict.items() if len(set(a for a, _ in items)) >= 3}
 
 
 def _compute_all_iaa(conn):
     label_filtered = _build_iaa_data(conn)
-
-    result = {
-        "fleiss_kappa": 0,
-        "alpha_label": 0,
-        "label_sample_count": len(label_filtered),
-    }
-
+    result = {"fleiss_kappa": 0, "alpha_label": 0, "label_sample_count": len(label_filtered)}
     if label_filtered:
         try:
             fleiss_input = [
@@ -299,7 +274,6 @@ def _compute_all_iaa(conn):
             result["alpha_label"] = compute_krippendorff_alpha_label(label_filtered)
         except Exception as e:
             print(f"label IAA 오류: {e}")
-
     return result
 
 
@@ -342,19 +316,13 @@ def get_last_index(annotator: str, category: str = "ALL"):
     cursor = conn.cursor()
     try:
         filtered = get_filtered(category)
-        submitted_ids = set(
-            r[0] for r in cursor.execute("""
-                SELECT DISTINCT sample_id FROM annotations
-                WHERE annotator=? AND (round IS NULL OR round = 1)
-                  AND q1 IS NOT NULL
-            """, (annotator,)).fetchall()
-        )
-        excluded_ids = set(
-            r[0] for r in cursor.execute("""
-                SELECT DISTINCT sample_id FROM excluded_samples
-                WHERE annotator=?
-            """, (annotator,)).fetchall()
-        )
+        submitted_ids = set(r[0] for r in cursor.execute("""
+            SELECT DISTINCT sample_id FROM annotations
+            WHERE annotator=? AND (round IS NULL OR round = 1) AND q1 IS NOT NULL
+        """, (annotator,)).fetchall())
+        excluded_ids = set(r[0] for r in cursor.execute("""
+            SELECT DISTINCT sample_id FROM excluded_samples WHERE annotator=?
+        """, (annotator,)).fetchall())
         done_ids = submitted_ids | excluded_ids
 
         last_idx = 0
@@ -381,7 +349,6 @@ def submit(data: dict):
 
         if is_correct is None:
             return {"status": "error", "message": "is_correct is required"}
-
         if is_correct is False:
             if final_label not in ("F", "C", "M"):
                 return {"status": "error", "message": "final_label must be F/C/M when disagree"}
@@ -419,12 +386,7 @@ def submit(data: dict):
         os.makedirs(annotator_dir, exist_ok=True)
         safe_sample_id = sample_id.replace("/", "_")
         file_path = os.path.join(annotator_dir, f"{safe_sample_id}.jsonl")
-        record = {
-            "sample_id": sample_id,
-            "annotator": annotator,
-            "q1": q1,
-            "final_label": final_label
-        }
+        record = {"sample_id": sample_id, "annotator": annotator, "q1": q1, "final_label": final_label}
         existing_records = {}
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as f:
@@ -448,7 +410,6 @@ def submit(data: dict):
 def exclude_sample(data: dict):
     sample_id = data.get("sample_id")
     annotator = data.get("annotator")
-
     if not sample_id or not annotator:
         return {"status": "error", "message": "sample_id, annotator required"}
 
@@ -486,11 +447,7 @@ def exclude_sample(data: dict):
 
 
 @app.get("/annotation")
-def get_annotation(
-    sample_id: str = Query(...),
-    annotator: str = Query(...),
-    round_num: int = Query(1),
-):
+def get_annotation(sample_id: str = Query(...), annotator: str = Query(...), round_num: int = Query(1)):
     return load_annotation_from_db(sample_id, annotator, round_num)
 
 
@@ -501,15 +458,11 @@ def get_submitted_ids(annotator: str, category: str = "ALL"):
     try:
         rows = cursor.execute("""
             SELECT DISTINCT sample_id FROM annotations
-            WHERE annotator=? AND (round IS NULL OR round = 1)
-              AND q1 IS NOT NULL
+            WHERE annotator=? AND (round IS NULL OR round = 1) AND q1 IS NOT NULL
         """, (annotator,)).fetchall()
-
         submitted = set(r[0] for r in rows)
         filtered = get_filtered(category)
-        return {
-            "submitted_indices": [i for i, s in enumerate(filtered) if s["sample_id"] in submitted]
-        }
+        return {"submitted_indices": [i for i, s in enumerate(filtered) if s["sample_id"] in submitted]}
     except Exception as e:
         print(f"submitted_ids 오류: {e}")
         return {"submitted_indices": []}
@@ -523,15 +476,11 @@ def get_excluded_ids(annotator: str, category: str = "ALL"):
     cursor = conn.cursor()
     try:
         rows = cursor.execute("""
-            SELECT DISTINCT sample_id FROM excluded_samples
-            WHERE annotator=?
+            SELECT DISTINCT sample_id FROM excluded_samples WHERE annotator=?
         """, (annotator,)).fetchall()
-
         excluded = set(r[0] for r in rows)
         filtered = get_filtered(category)
-        return {
-            "excluded_indices": [i for i, s in enumerate(filtered) if s["sample_id"] in excluded]
-        }
+        return {"excluded_indices": [i for i, s in enumerate(filtered) if s["sample_id"] in excluded]}
     except Exception as e:
         print(f"excluded_ids 오류: {e}")
         return {"excluded_indices": []}
@@ -556,14 +505,11 @@ def progress(annotator: str = None, category: str = None):
             if category and category != "ALL":
                 done = cursor.execute("""
                     SELECT COUNT(DISTINCT sample_id) FROM (
-                        SELECT a.sample_id
-                        FROM annotations a JOIN samples s ON a.sample_id = s.sample_id
+                        SELECT a.sample_id FROM annotations a JOIN samples s ON a.sample_id=s.sample_id
                         WHERE a.annotator=? AND LOWER(s.category)=LOWER(?)
-                          AND (a.round IS NULL OR a.round = 1)
-                          AND a.q1 IS NOT NULL
+                          AND (a.round IS NULL OR a.round=1) AND a.q1 IS NOT NULL
                         UNION
-                        SELECT es.sample_id
-                        FROM excluded_samples es JOIN samples s ON es.sample_id = s.sample_id
+                        SELECT es.sample_id FROM excluded_samples es JOIN samples s ON es.sample_id=s.sample_id
                         WHERE es.annotator=? AND LOWER(s.category)=LOWER(?)
                     )
                 """, (annotator, category, annotator, category)).fetchone()[0]
@@ -571,11 +517,9 @@ def progress(annotator: str = None, category: str = None):
                 done = cursor.execute("""
                     SELECT COUNT(DISTINCT sample_id) FROM (
                         SELECT sample_id FROM annotations
-                        WHERE annotator=? AND (round IS NULL OR round = 1)
-                          AND q1 IS NOT NULL
+                        WHERE annotator=? AND (round IS NULL OR round=1) AND q1 IS NOT NULL
                         UNION
-                        SELECT sample_id FROM excluded_samples
-                        WHERE annotator=?
+                        SELECT sample_id FROM excluded_samples WHERE annotator=?
                     )
                 """, (annotator, annotator)).fetchone()[0]
 
@@ -592,12 +536,8 @@ def progress_detail(category: str = "ALL"):
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
-        if category == "ALL":
-            total = cursor.execute("SELECT COUNT(*) FROM samples").fetchone()[0]
-        else:
-            total = cursor.execute(
-                "SELECT COUNT(*) FROM samples WHERE LOWER(category)=LOWER(?)", (category,)
-            ).fetchone()[0]
+        total = cursor.execute("SELECT COUNT(*) FROM samples").fetchone()[0] if category == "ALL" else \
+                cursor.execute("SELECT COUNT(*) FROM samples WHERE LOWER(category)=LOWER(?)", (category,)).fetchone()[0]
         annotators = ["A", "B", "C", "D", "E"]
         result = {}
         for a in annotators:
@@ -605,24 +545,19 @@ def progress_detail(category: str = "ALL"):
                 done = cursor.execute("""
                     SELECT COUNT(DISTINCT sample_id) FROM (
                         SELECT sample_id FROM annotations
-                        WHERE annotator=? AND (round IS NULL OR round = 1)
-                          AND q1 IS NOT NULL
+                        WHERE annotator=? AND (round IS NULL OR round=1) AND q1 IS NOT NULL
                         UNION
-                        SELECT sample_id FROM excluded_samples
-                        WHERE annotator=?
+                        SELECT sample_id FROM excluded_samples WHERE annotator=?
                     )
                 """, (a, a)).fetchone()[0]
             else:
                 done = cursor.execute("""
                     SELECT COUNT(DISTINCT sample_id) FROM (
-                        SELECT ann.sample_id
-                        FROM annotations ann JOIN samples s ON ann.sample_id = s.sample_id
+                        SELECT ann.sample_id FROM annotations ann JOIN samples s ON ann.sample_id=s.sample_id
                         WHERE ann.annotator=? AND LOWER(s.category)=LOWER(?)
-                          AND (ann.round IS NULL OR ann.round = 1)
-                          AND ann.q1 IS NOT NULL
+                          AND (ann.round IS NULL OR ann.round=1) AND ann.q1 IS NOT NULL
                         UNION
-                        SELECT es.sample_id
-                        FROM excluded_samples es JOIN samples s ON es.sample_id = s.sample_id
+                        SELECT es.sample_id FROM excluded_samples es JOIN samples s ON es.sample_id=s.sample_id
                         WHERE es.annotator=? AND LOWER(s.category)=LOWER(?)
                     )
                 """, (a, category, a, category)).fetchone()[0]
@@ -651,7 +586,6 @@ def sample_classification():
     conn = get_db_conn()
     try:
         all_annotations = _get_all_annotations_raw(conn)
-        # conn_external 전달 → _classify_samples 내부에서 decisions를 DB로부터 직접 읽음
         return _classify_samples(all_annotations, conn_external=conn)
     except Exception as e:
         return {}
@@ -662,20 +596,14 @@ def sample_classification():
 @app.get("/discussion_samples")
 def get_discussion_samples():
     """
-    Disagreement Set 목록 반환
-
-    과반수 합의(confirmed)된 샘플은 Disagreement Set에서 제외
-        status가 'needs_discussion' 또는 'discussion_resolved'인 샘플만 표시
-          - confirmed: 과반수 자동 확정 → 목록에서 제거
-          - discussion_resolved: 수동 확정 완료 → resolved 섹션에 표시 유지
-          - needs_discussion: 아직 합의 안 됨 → pending 섹션에 표시
-
-        conn_external 전달 → _classify_samples가 decisions를 DB에서 읽어 수동 확정(set_final_label) 결과가 즉시 반영됨
+    Disagreement Set 목록 반환.
+    - confirmed(과반수 자동 확정): 목록에서 제외 → 최종 데이터셋에만 반영
+    - needs_discussion: 수동 처리 필요 섹션 표시
+    - discussion_resolved: 수동 확정 완료 섹션 표시
     """
     conn = get_db_conn()
     try:
         all_annotations = _get_all_annotations_raw(conn)
-        # conn_external 전달
         classification = _classify_samples(all_annotations, conn_external=conn)
         predicted_map = {s["sample_id"]: s.get("predicted") for s in samples}
 
@@ -692,7 +620,7 @@ def get_discussion_samples():
 
             clf = classification.get(sid, {"status": "in_progress", "confirmed_label": None})
 
-            # confirmed 샘플(과반수 자동 확정)은 Disagreement Set에서 제외
+            # confirmed(과반수 자동 확정)는 Disagreement Set에서 제외
             if clf["status"] == "confirmed":
                 continue
 
@@ -743,11 +671,9 @@ def admin_dashboard():
             done = cursor.execute("""
                 SELECT COUNT(DISTINCT sample_id) FROM (
                     SELECT sample_id FROM annotations
-                    WHERE annotator=? AND (round IS NULL OR round = 1)
-                      AND q1 IS NOT NULL
+                    WHERE annotator=? AND (round IS NULL OR round=1) AND q1 IS NOT NULL
                     UNION
-                    SELECT sample_id FROM excluded_samples
-                    WHERE annotator=?
+                    SELECT sample_id FROM excluded_samples WHERE annotator=?
                 )
             """, (a, a)).fetchone()[0]
             progress_data[a] = {
@@ -758,21 +684,16 @@ def admin_dashboard():
         categories = cursor.execute("SELECT DISTINCT category FROM samples ORDER BY category").fetchall()
         category_data = {}
         for (cat,) in categories:
-            cat_total = cursor.execute(
-                "SELECT COUNT(*) FROM samples WHERE category=?", (cat,)
-            ).fetchone()[0]
+            cat_total = cursor.execute("SELECT COUNT(*) FROM samples WHERE category=?", (cat,)).fetchone()[0]
             cat_done = {}
             for a in annotators:
                 done = cursor.execute("""
                     SELECT COUNT(DISTINCT sample_id) FROM (
-                        SELECT ann.sample_id
-                        FROM annotations ann JOIN samples s ON ann.sample_id = s.sample_id
+                        SELECT ann.sample_id FROM annotations ann JOIN samples s ON ann.sample_id=s.sample_id
                         WHERE ann.annotator=? AND s.category=?
-                          AND (ann.round IS NULL OR ann.round = 1)
-                          AND ann.q1 IS NOT NULL
+                          AND (ann.round IS NULL OR ann.round=1) AND ann.q1 IS NOT NULL
                         UNION
-                        SELECT es.sample_id
-                        FROM excluded_samples es JOIN samples s ON es.sample_id = s.sample_id
+                        SELECT es.sample_id FROM excluded_samples es JOIN samples s ON es.sample_id=s.sample_id
                         WHERE es.annotator=? AND s.category=?
                     )
                 """, (a, cat, a, cat)).fetchone()[0]
@@ -781,20 +702,16 @@ def admin_dashboard():
 
         iaa = _compute_all_iaa(conn)
         all_annotations = _get_all_annotations_raw(conn)
-        # [FIX 2] conn_external 전달
         classification = _classify_samples(all_annotations, conn_external=conn)
         classification_counts = dict(Counter(info["status"] for info in classification.values()))
 
         excluded_by_annotator = {}
         for a in annotators:
-            cnt = cursor.execute("""
-                SELECT COUNT(*) FROM excluded_samples WHERE annotator=?
-            """, (a,)).fetchone()[0]
+            cnt = cursor.execute("SELECT COUNT(*) FROM excluded_samples WHERE annotator=?", (a,)).fetchone()[0]
             excluded_by_annotator[a] = cnt
-
-        excluded_sample_count = cursor.execute("""
-            SELECT COUNT(DISTINCT sample_id) FROM excluded_samples
-        """).fetchone()[0]
+        excluded_sample_count = cursor.execute(
+            "SELECT COUNT(DISTINCT sample_id) FROM excluded_samples"
+        ).fetchone()[0]
 
         return {
             "total_samples": total,
@@ -810,19 +727,14 @@ def admin_dashboard():
         return {
             "total_samples": 0, "progress": {}, "category_progress": {},
             "iaa": {"fleiss_kappa": 0, "alpha_q1": 0, "icc": 0, "alpha_label": 0},
-            "classification": {},
-            "excluded_by_annotator": {},
-            "excluded_sample_count": 0,
+            "classification": {}, "excluded_by_annotator": {}, "excluded_sample_count": 0,
         }
     finally:
         conn.close()
 
 
 @app.get("/db_query")
-def db_query(
-    sample_id: str = None, annotator: str = None,
-    round_num: int = None, limit: int = 200, offset: int = 0,
-):
+def db_query(sample_id: str = None, annotator: str = None, round_num: int = None, limit: int = 200, offset: int = 0):
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
@@ -839,19 +751,13 @@ def db_query(
         where_sql = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
         total = cursor.execute(f"SELECT COUNT(*) FROM annotations{where_sql}", params).fetchone()[0]
         rows = cursor.execute(f"""
-            SELECT sample_id, annotator, final_label, q1, round
-            FROM annotations{where_sql}
+            SELECT sample_id, annotator, final_label, q1, round FROM annotations{where_sql}
             ORDER BY sample_id, annotator LIMIT ? OFFSET ?
         """, params + [limit, offset]).fetchall()
         return {
             "total": total, "limit": limit, "offset": offset,
-            "data": [
-                {
-                    "sample_id": r[0], "annotator": r[1], "final_label": r[2],
-                    "q1": r[3], "round": r[4] if r[4] is not None else 1
-                }
-                for r in rows
-            ],
+            "data": [{"sample_id": r[0], "annotator": r[1], "final_label": r[2],
+                      "q1": r[3], "round": r[4] if r[4] is not None else 1} for r in rows],
         }
     except Exception as e:
         return {"total": 0, "limit": limit, "offset": offset, "data": []}
@@ -874,11 +780,8 @@ def get_all_annotations(annotator: str = None):
                 SELECT sample_id, annotator, final_label, q1, round
                 FROM annotations ORDER BY sample_id, annotator
             """).fetchall()
-        return [
-            {"sample_id": r[0], "annotator": r[1], "final_label": r[2],
-             "q1": r[3], "round": r[4] if r[4] is not None else 1}
-            for r in rows
-        ]
+        return [{"sample_id": r[0], "annotator": r[1], "final_label": r[2],
+                 "q1": r[3], "round": r[4] if r[4] is not None else 1} for r in rows]
     except Exception as e:
         return []
     finally:
@@ -891,8 +794,7 @@ def export_csv():
     cursor = conn.cursor()
     try:
         rows = cursor.execute("""
-            SELECT sample_id, annotator, final_label, q1
-            FROM annotations ORDER BY sample_id, annotator
+            SELECT sample_id, annotator, final_label, q1 FROM annotations ORDER BY sample_id, annotator
         """).fetchall()
         output = io.StringIO()
         writer = csv.writer(output)
@@ -900,10 +802,8 @@ def export_csv():
         for r in rows:
             writer.writerow([r[0], r[1], r[3], r[2]])
         output.seek(0)
-        return StreamingResponse(
-            output, media_type="text/csv",
-            headers={"Content-Disposition": "attachment; filename=annotations.csv"},
-        )
+        return StreamingResponse(output, media_type="text/csv",
+                                 headers={"Content-Disposition": "attachment; filename=annotations.csv"})
     finally:
         conn.close()
 
@@ -914,20 +814,14 @@ def export_json():
     cursor = conn.cursor()
     try:
         rows = cursor.execute("""
-            SELECT sample_id, annotator, final_label, q1
-            FROM annotations ORDER BY sample_id, annotator
+            SELECT sample_id, annotator, final_label, q1 FROM annotations ORDER BY sample_id, annotator
         """).fetchall()
-        data = [
-            {"sample_id": r[0], "annotator": r[1], "q1": r[3], "final_label": r[2]}
-            for r in rows
-        ]
+        data = [{"sample_id": r[0], "annotator": r[1], "q1": r[3], "final_label": r[2]} for r in rows]
         output = io.StringIO()
         json.dump(data, output, ensure_ascii=False, indent=2)
         output.seek(0)
-        return StreamingResponse(
-            output, media_type="application/json",
-            headers={"Content-Disposition": "attachment; filename=annotations.json"},
-        )
+        return StreamingResponse(output, media_type="application/json",
+                                 headers={"Content-Disposition": "attachment; filename=annotations.json"})
     finally:
         conn.close()
 
@@ -937,7 +831,6 @@ def export_final_dataset():
     conn = get_db_conn()
     try:
         all_annotations = _get_all_annotations_raw(conn)
-        # conn_external 전달 → 수동 확정 라벨 포함
         classification = _classify_samples(all_annotations, conn_external=conn)
         sample_map = {s["sample_id"]: s for s in samples}
         result = []
@@ -958,10 +851,8 @@ def export_final_dataset():
         output = io.StringIO()
         json.dump(result, output, ensure_ascii=False, indent=2)
         output.seek(0)
-        return StreamingResponse(
-            output, media_type="application/json",
-            headers={"Content-Disposition": "attachment; filename=final_dataset.json"},
-        )
+        return StreamingResponse(output, media_type="application/json",
+                                 headers={"Content-Disposition": "attachment; filename=final_dataset.json"})
     except Exception as e:
         print(f"export_final_dataset 오류: {e}")
         return StreamingResponse(io.StringIO("[]"), media_type="application/json")
@@ -986,12 +877,12 @@ async def restore_annotations(request: dict):
             q1_int = None if q1_val is None else int(q1_val)
             exists = cursor.execute("""
                 SELECT COUNT(*) FROM annotations
-                WHERE sample_id=? AND annotator=? AND (round IS NULL OR round = 1)
+                WHERE sample_id=? AND annotator=? AND (round IS NULL OR round=1)
             """, (row["sample_id"], row["annotator"])).fetchone()[0]
             if exists > 0:
                 cursor.execute("""
                     UPDATE annotations SET final_label=?, q1=?
-                    WHERE sample_id=? AND annotator=? AND (round IS NULL OR round = 1)
+                    WHERE sample_id=? AND annotator=? AND (round IS NULL OR round=1)
                 """, (row.get("final_label"), q1_int, row["sample_id"], row["annotator"]))
             else:
                 cursor.execute("""
@@ -1010,22 +901,41 @@ async def restore_annotations(request: dict):
 
 @app.post("/set_final_label")
 def set_final_label(data: dict):
-    """수동 최종 라벨 확정 — sample_decisions 테이블에 저장"""
+    """
+    수동 최종 라벨 확정 — sample_decisions 테이블에 저장
+
+    테이블 존재 여부 재확인 후 저장
+    _migrate_db에서 테이블을 생성하지만, 혹시 누락된 경우를 대비해
+    여기서도 CREATE TABLE IF NOT EXISTS를 실행 후 INSERT
+    """
     sample_id = data.get("sample_id")
     final_label = data.get("final_label")
     if not sample_id or final_label not in ("F", "C", "M"):
-        return {"status": "error", "message": "sample_id and valid final_label required"}
+        return {"status": "error", "message": "sample_id and valid final_label (F/C/M) required"}
+
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
+        # 테이블이 없는 경우 방어적으로 생성
         cursor.execute("""
-            INSERT OR REPLACE INTO sample_decisions (sample_id, final_label)
-            VALUES (?, ?)
-        """, (sample_id, final_label))
+            CREATE TABLE IF NOT EXISTS sample_decisions (
+                sample_id TEXT PRIMARY KEY,
+                final_label TEXT,
+                decided_at TEXT
+            )
+        """)
+
+        cursor.execute("""
+            INSERT OR REPLACE INTO sample_decisions (sample_id, final_label, decided_at)
+            VALUES (?, ?, ?)
+        """, (sample_id, final_label, datetime.utcnow().isoformat()))
+
         conn.commit()
-        return {"status": "saved"}
+        print(f"[set_final_label] 저장 완료: {sample_id} → {final_label}")
+        return {"status": "saved", "sample_id": sample_id, "final_label": final_label}
     except Exception as e:
         conn.rollback()
+        print(f"[set_final_label] 저장 실패: {e}")
         return {"status": "error", "message": str(e)}
     finally:
         conn.close()
@@ -1039,6 +949,7 @@ def delete_final_label(sample_id: str = Query(...)):
     try:
         cursor.execute("DELETE FROM sample_decisions WHERE sample_id=?", (sample_id,))
         conn.commit()
+        print(f"[delete_final_label] 취소 완료: {sample_id}")
         return {"status": "deleted"}
     except Exception as e:
         conn.rollback()
