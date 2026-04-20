@@ -108,7 +108,8 @@ function DiscussionPage({ onBack, allSamples }) {
         sample_id: selected.sample_id,
         final_label: decidedLabel,
       });
-      alert(`✅ ${selected.sample_id} → ${decidedLabel} 확정`);
+
+      // 확정 후 목록 전체 새로고침 → 해당 샘플을 resolved 섹션으로 이동시키고 선택 상태도 업데이트해 확정 라벨이 즉시 화면에 반영되게 함
       const res = await axios.get(`${BASE_URL}/discussion_samples`);
       setDiscussionData(res.data);
       const updated = res.data.samples.find((s) => s.sample_id === selected.sample_id);
@@ -116,6 +117,7 @@ function DiscussionPage({ onBack, allSamples }) {
         setSelected(updated);
         setDecidedLabel(updated.decided_label || '');
       }
+      alert(`✅ ${selected.sample_id} → ${decidedLabel} 확정 완료`);
     } catch {
       alert('저장 실패');
     }
@@ -127,13 +129,15 @@ function DiscussionPage({ onBack, allSamples }) {
       await axios.delete(`${BASE_URL}/set_final_label?sample_id=${encodeURIComponent(selected.sample_id)}`);
       alert('결정 취소됨');
       await fetchDiscussion();
-      setSelected((prev) => ({ ...prev, resolved: false, decided_label: null }));
+      // 취소 후 selected 상태 초기화
+      setSelected((prev) => ({ ...prev, resolved: false, decided_label: null, status: 'needs_discussion' }));
       setDecidedLabel('');
     } catch {
       alert('취소 실패');
     }
   };
 
+  // resolved 여부 분류
   const pendingItems = discussionData.samples.filter((s) => !s.resolved);
   const resolvedItems = discussionData.samples.filter((s) => s.resolved);
 
@@ -143,7 +147,7 @@ function DiscussionPage({ onBack, allSamples }) {
         <h1>📋 Disagreement Set</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 12, color: '#6b7280' }}>
-            Resolved {discussionData.resolved_count} / 전체 {discussionData.total}
+            수동 확정 {discussionData.resolved_count} / 합의 필요 {discussionData.total}
           </span>
           <button onClick={fetchDiscussion} className="nav-btn" style={{ padding: '4px 10px', fontSize: 11 }}>
             ↻ 새로고침
@@ -165,8 +169,8 @@ function DiscussionPage({ onBack, allSamples }) {
           color: '#854d0e',
         }}
       >
-        ⚠️ 아래 샘플들은 <strong>1명 이상이 X를 선택</strong>하여 LLM 라벨에 동의하지 않은 경우입니다. 어노테이터끼리
-        합의 후 최종 라벨을 결정해주세요.
+        ⚠️ 아래 샘플들은 <strong>과반수 합의가 되지 않아</strong> 수동으로 최종 라벨을 결정해야 합니다. 과반수 합의가
+        완료된 샘플은 자동으로 목록에서 제외됩니다.
       </div>
 
       <div className="main">
@@ -174,7 +178,7 @@ function DiscussionPage({ onBack, allSamples }) {
           {loading ? (
             <p style={{ color: '#9ca3af' }}>로딩 중...</p>
           ) : discussionData.total === 0 ? (
-            <p style={{ color: '#16a34a' }}>🎉 Disagreement 샘플이 없습니다!</p>
+            <p style={{ color: '#16a34a' }}>🎉 수동 처리가 필요한 샘플이 없습니다!</p>
           ) : (
             <div style={{ overflowY: 'auto' }}>
               {pendingItems.length > 0 && (
@@ -189,7 +193,7 @@ function DiscussionPage({ onBack, allSamples }) {
                       marginBottom: 4,
                     }}
                   >
-                    ⚠️ Disagreement ({pendingItems.length}개)
+                    ⚠️ 합의 필요 ({pendingItems.length}개)
                   </div>
                   {pendingItems.map((item) => (
                     <div
@@ -218,7 +222,7 @@ function DiscussionPage({ onBack, allSamples }) {
                       marginBottom: 4,
                     }}
                   >
-                    ✅ Disagreement Resolved ({resolvedItems.length}개)
+                    ✅ 수동 확정 완료 ({resolvedItems.length}개)
                   </div>
                   {resolvedItems.map((item) => (
                     <div
@@ -313,6 +317,8 @@ function DiscussionPage({ onBack, allSamples }) {
                     ))}
                   </tbody>
                 </table>
+
+                {/* resolved 판별을 selected.resolved로 통일 */}
                 {selected.resolved ? (
                   <div
                     style={{
@@ -325,7 +331,7 @@ function DiscussionPage({ onBack, allSamples }) {
                       fontWeight: 600,
                     }}
                   >
-                    ✅ 다수결 자동 확정 라벨: <span style={{ fontSize: 14 }}>{selected.decided_label}</span>
+                    ✅ 수동 확정 라벨: <span style={{ fontSize: 14 }}>{selected.decided_label}</span>
                   </div>
                 ) : (
                   <div
@@ -338,7 +344,7 @@ function DiscussionPage({ onBack, allSamples }) {
                       color: '#854d0e',
                     }}
                   >
-                    ⚠️ 아직 과반수 합의 미달 — 더 많은 어노테이터의 응답이 필요합니다
+                    ⚠️ 과반수 합의 미달 — 아래에서 최종 라벨을 수동으로 결정해주세요
                   </div>
                 )}
               </div>
@@ -354,8 +360,16 @@ function DiscussionPage({ onBack, allSamples }) {
                 </div>
               )}
 
+              {/* 수동 확정 UI: resolved 여부에 따라 라벨 버튼 활성/비활성 표시 */}
               <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
-                <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>최종 라벨 결정</p>
+                <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>
+                  최종 라벨 수동 결정
+                  {selected.resolved && (
+                    <span style={{ fontSize: 11, color: '#2563eb', marginLeft: 8 }}>
+                      (현재 확정: {selected.decided_label})
+                    </span>
+                  )}
+                </p>
                 <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                   {['F', 'C', 'M'].map((l) => (
                     <button
@@ -368,8 +382,17 @@ function DiscussionPage({ onBack, allSamples }) {
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="submit-btn" onClick={submitDecision} style={{ flex: 1 }}>
-                    확정
+                  <button
+                    className="submit-btn"
+                    onClick={submitDecision}
+                    disabled={!decidedLabel}
+                    style={{
+                      flex: 1,
+                      opacity: decidedLabel ? 1 : 0.5,
+                      cursor: decidedLabel ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    {selected.resolved ? '라벨 변경' : '확정'}
                   </button>
                   {selected.resolved && (
                     <button
@@ -385,11 +408,12 @@ function DiscussionPage({ onBack, allSamples }) {
                         fontSize: 13,
                       }}
                     >
-                      취소
+                      확정 취소
                     </button>
                   )}
                 </div>
               </div>
+              {/* ──────────────────────────────────────────────────────────── */}
             </>
           )}
         </div>
@@ -469,9 +493,7 @@ function AdminPage({ onBack }) {
                   {p.done} / {p.total} ({p.percent}%)
                 </span>
                 {(adminData.excluded_by_annotator?.[a] || 0) > 0 && (
-                  <span style={{ fontSize: 11, color: '#6b7280' }}>
-                    🚫 {adminData.excluded_by_annotator[a]}개 제외 포함
-                  </span>
+                  <span style={{ fontSize: 11, color: '#6b7280' }}>🚫 {adminData.excluded_by_annotator[a]}개 제외</span>
                 )}
               </div>
             );
@@ -488,7 +510,7 @@ function AdminPage({ onBack }) {
               }}
             >
               🚫 제외된 샘플 (1명 이상 제외): <strong>{adminData.excluded_sample_count}개</strong>
-              <span style={{ marginLeft: 6, color: '#9ca3af' }}>(진행률에 포함, 최종 데이터셋에서는 제외)</span>
+              <span style={{ marginLeft: 6, color: '#9ca3af' }}></span>
             </div>
           )}
 
@@ -538,13 +560,13 @@ function AdminPage({ onBack }) {
               <div className="classification-guide">
                 <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 12 }}>분류 기준 안내</div>
                 <div>
-                  • <strong>확정</strong>: 과반수 동일 라벨 → 자동 확정
+                  • <strong>확정</strong>: 과반수 동일 라벨 → 자동 확정 (Disagreement Set 미표시)
                 </div>
                 <div>
                   • <strong>Disagreement Set</strong>: 과반수 미달 → 수동 합의 필요
                 </div>
                 <div>
-                  • <strong>Disagreement Resolved</strong>: 최종 라벨 결정됨
+                  • <strong>Disagreement Resolved</strong>: 수동 라벨 결정 완료
                 </div>
                 <div>
                   • <strong>진행 중</strong>: 아직 3명 미만 제출
@@ -680,7 +702,7 @@ function AdminPage({ onBack }) {
             <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 12, color: '#111827' }}>
               📊 최종 데이터셋 (확정 + Disagreement Resolved 샘플)
             </div>
-            <div>다수결로 확정된 라벨을 포함합니다. 제외 샘플은 포함되지 않습니다.</div>
+            <div>과반수 자동 확정 + 수동 확정 라벨을 포함합니다. 제외 샘플은 포함되지 않습니다.</div>
             <div style={{ marginTop: 4, fontSize: 11, color: '#6b7280' }}>
               형식: sample_id, target_sentence, label, prev_sentence, next_sentence
             </div>
@@ -737,14 +759,8 @@ function App() {
   const [currentStep, setCurrentStep] = useState(1);
   const [total, setTotal] = useState(1);
   const [category, setCategory] = useState('ALL');
-
-  // 제출 완료 샘플 ID Set
   const [submittedSampleIds, setSubmittedSampleIds] = useState(new Set());
-
-  // 제외 샘플 ID Set — 별도로 관리해 샘플 목록 🚫 표시에 사용
-  // 어노테이터 변경 시 /excluded_ids 호출로 해당 어노테이터의 제외 목록을 Set으로 교체
   const [excludedSampleIds, setExcludedSampleIds] = useState(new Set());
-
   const [currentIndex, setCurrentIndex] = useState(0);
   const [allSamples, setAllSamples] = useState([]);
   const [jumpOpen, setJumpOpen] = useState(false);
@@ -761,7 +777,6 @@ function App() {
     setLabel('');
   };
 
-  // 제출 목록(submitted) + 제외 목록(excluded) 동시 동기화
   const buildAnnotatorSets = useCallback(async (ann, samplesSnapshot) => {
     if (!ann) {
       setSubmittedSampleIds(new Set());
@@ -777,7 +792,6 @@ function App() {
       const submittedIndices = new Set(submittedRes.data.submitted_indices);
       const excludedIndices = new Set(excludedRes.data.excluded_indices);
 
-      // 인덱스 → sample_id 변환
       const submittedIds = new Set(samplesSnapshot.filter((_, i) => submittedIndices.has(i)).map((s) => s.sample_id));
       const excludedIds = new Set(samplesSnapshot.filter((_, i) => excludedIndices.has(i)).map((s) => s.sample_id));
 
@@ -854,6 +868,7 @@ function App() {
   const fetchDiscussionCount = useCallback(async () => {
     try {
       const res = await axios.get(`${BASE_URL}/discussion_samples`);
+      // unresolved 카운트
       const unresolved = (res.data.samples || []).filter((s) => !s.resolved).length;
       setDiscussionCount(unresolved);
     } catch {}
@@ -864,7 +879,6 @@ function App() {
     fetchClassification();
     fetchDiscussionCount();
 
-    // 초기 로드: allSamples 확보 후 제출/제외 목록 동기화
     fetchAllSamples().then((samples) => {
       if (saved) {
         buildAnnotatorSets(saved, samples);
@@ -894,10 +908,7 @@ function App() {
     setAnnotator(a);
     localStorage.setItem('annotator', a);
     fetchProgress(a, category);
-
-    // 어노테이터 변경 시 제출 + 제외 목록 모두 교체
     await buildAnnotatorSets(a, allSamples);
-
     const res = await axios.get(`${BASE_URL}/last_index?annotator=${a}&category=${category}`);
     const data = await fetchSampleByIndex(res.data.last_index, category);
     await loadAnnotation(data, a);
@@ -936,7 +947,6 @@ function App() {
         round: 1,
       });
 
-      // 제출 성공 시 현재 sample_id를 제출 Set에 추가
       setSubmittedSampleIds((prev) => {
         const newSet = new Set(prev);
         newSet.add(sample.sample_id);
@@ -978,14 +988,11 @@ function App() {
     if (!window.confirm('이 샘플을 제외하시겠습니까?\n제외하면 최종 데이터셋에 포함되지 않습니다.')) return;
     try {
       await axios.post(`${BASE_URL}/exclude`, { sample_id: sample.sample_id, annotator });
-
-      // 제외 성공 시 excludedSampleIds Set에 추가해 샘플 목록 즉시 동기화
       setExcludedSampleIds((prev) => {
         const newSet = new Set(prev);
         newSet.add(sample.sample_id);
         return newSet;
       });
-
       fetchProgress(annotator, category);
       fetchClassification();
       resetState();
@@ -1169,23 +1176,18 @@ function App() {
                 >
                   {jumpList.map((s) => {
                     const globalIdx = allSamples.findIndex((o) => o.sample_id === s.sample_id);
-
-                    // 샘플 목록 아이콘 결정 로직 수정
                     const isMyExcluded = annotator && excludedSampleIds.has(s.sample_id);
                     const isMySubmitted = annotator && submittedSampleIds.has(s.sample_id);
                     const clf = sampleClassification[s.sample_id];
-
                     const mark = isMyExcluded
-                      ? '🚫' // 현재 어노테이터가 제외한 샘플
+                      ? '🚫'
                       : isMySubmitted
-                        ? '✅' // 현재 어노테이터가 제출 완료
+                        ? '✅'
                         : clf?.status === 'needs_discussion'
-                          ? '⚠️' // 전체 기준 disagreement
+                          ? '⚠️'
                           : clf?.status === 'discussion_resolved'
-                            ? '💬' // 전체 기준 resolved
-                            : '⬜'; // 미제출
-                    // ──────────────────────────────────────────────────────────
-
+                            ? '💬'
+                            : '⬜';
                     return (
                       <option key={s.sample_id} value={globalIdx}>
                         {mark} {s.sample_id}
