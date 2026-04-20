@@ -499,9 +499,7 @@ function AdminPage({ onBack }) {
                   {p.done} / {p.total} ({p.percent}%)
                 </span>
                 {(adminData.excluded_by_annotator?.[a] || 0) > 0 && (
-                  <span style={{ fontSize: 11, color: '#6b7280' }}>
-                    🚫 {adminData.excluded_by_annotator[a]}개 제외 포함
-                  </span>
+                  <span style={{ fontSize: 11, color: '#6b7280' }}>🚫 {adminData.excluded_by_annotator[a]}개 제외</span>
                 )}
               </div>
             );
@@ -518,7 +516,7 @@ function AdminPage({ onBack }) {
               }}
             >
               🚫 제외된 샘플 (1명 이상 제외): <strong>{adminData.excluded_sample_count}개</strong>
-              <span style={{ marginLeft: 6, color: '#9ca3af' }}>(진행률에 포함, 최종 데이터셋에서는 제외)</span>
+              <span style={{ marginLeft: 6, color: '#9ca3af' }}></span>
             </div>
           )}
 
