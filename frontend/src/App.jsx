@@ -71,6 +71,8 @@ function DiscussionPage({ onBack, allSamples }) {
   const [sampleDetail, setSampleDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [decidedLabel, setDecidedLabel] = useState('');
+  // 저장 중 상태 추가 — 확정 버튼 중복 클릭 방지 및 사용자 피드백
+  const [saving, setSaving] = useState(false);
 
   const fetchDiscussion = useCallback(async () => {
     setLoading(true);
@@ -102,24 +104,35 @@ function DiscussionPage({ onBack, allSamples }) {
   };
 
   const submitDecision = async () => {
-    if (!decidedLabel || !selected) return;
+    if (!decidedLabel || !selected || saving) return;
+    setSaving(true);
     try {
-      await axios.post(`${BASE_URL}/set_final_label`, {
+      // BE 응답의 status 필드를 명시적으로 확인
+      // res.data.status === 'error'이면 에러 메시지를 띄우고 종료
+      const res = await axios.post(`${BASE_URL}/set_final_label`, {
         sample_id: selected.sample_id,
         final_label: decidedLabel,
       });
 
-      // 확정 후 목록 전체 새로고침 → 해당 샘플을 resolved 섹션으로 이동시키고 선택 상태도 업데이트해 확정 라벨이 즉시 화면에 반영되게 함
-      const res = await axios.get(`${BASE_URL}/discussion_samples`);
-      setDiscussionData(res.data);
-      const updated = res.data.samples.find((s) => s.sample_id === selected.sample_id);
+      if (res.data.status === 'error') {
+        alert(`❌ 저장 실패: ${res.data.message}`);
+        setSaving(false);
+        return;
+      }
+
+      // 저장 성공 → 목록 새로고침 후 선택 상태 업데이트
+      const listRes = await axios.get(`${BASE_URL}/discussion_samples`);
+      setDiscussionData(listRes.data);
+      const updated = listRes.data.samples.find((s) => s.sample_id === selected.sample_id);
       if (updated) {
         setSelected(updated);
         setDecidedLabel(updated.decided_label || '');
       }
       alert(`✅ ${selected.sample_id} → ${decidedLabel} 확정 완료`);
-    } catch {
-      alert('저장 실패');
+    } catch (e) {
+      alert(`❌ 저장 실패: ${e.message}`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -129,7 +142,6 @@ function DiscussionPage({ onBack, allSamples }) {
       await axios.delete(`${BASE_URL}/set_final_label?sample_id=${encodeURIComponent(selected.sample_id)}`);
       alert('결정 취소됨');
       await fetchDiscussion();
-      // 취소 후 selected 상태 초기화
       setSelected((prev) => ({ ...prev, resolved: false, decided_label: null, status: 'needs_discussion' }));
       setDecidedLabel('');
     } catch {
@@ -137,7 +149,6 @@ function DiscussionPage({ onBack, allSamples }) {
     }
   };
 
-  // resolved 여부 분류
   const pendingItems = discussionData.samples.filter((s) => !s.resolved);
   const resolvedItems = discussionData.samples.filter((s) => s.resolved);
 
@@ -287,10 +298,7 @@ function DiscussionPage({ onBack, allSamples }) {
                     {selected.annotations.map((a, i) => (
                       <tr
                         key={i}
-                        style={{
-                          borderBottom: '1px solid #f1f5f9',
-                          background: a.q1 === 0 ? '#fef2f2' : 'white',
-                        }}
+                        style={{ borderBottom: '1px solid #f1f5f9', background: a.q1 === 0 ? '#fef2f2' : 'white' }}
                       >
                         <td style={{ padding: '5px 8px', fontWeight: 600 }}>Annotator {a.annotator}</td>
                         <td
@@ -318,7 +326,6 @@ function DiscussionPage({ onBack, allSamples }) {
                   </tbody>
                 </table>
 
-                {/* resolved 판별을 selected.resolved로 통일 */}
                 {selected.resolved ? (
                   <div
                     style={{
@@ -360,7 +367,6 @@ function DiscussionPage({ onBack, allSamples }) {
                 </div>
               )}
 
-              {/* 수동 확정 UI: resolved 여부에 따라 라벨 버튼 활성/비활성 표시 */}
               <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
                 <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>
                   최종 라벨 수동 결정
@@ -382,17 +388,18 @@ function DiscussionPage({ onBack, allSamples }) {
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
+                  {/* 저장 중(saving) 상태를 버튼에 반영 — 중복 요청 방지 */}
                   <button
                     className="submit-btn"
                     onClick={submitDecision}
-                    disabled={!decidedLabel}
+                    disabled={!decidedLabel || saving}
                     style={{
                       flex: 1,
-                      opacity: decidedLabel ? 1 : 0.5,
-                      cursor: decidedLabel ? 'pointer' : 'not-allowed',
+                      opacity: !decidedLabel || saving ? 0.5 : 1,
+                      cursor: !decidedLabel || saving ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    {selected.resolved ? '라벨 변경' : '확정'}
+                    {saving ? '저장 중...' : selected.resolved ? '라벨 변경' : '확정'}
                   </button>
                   {selected.resolved && (
                     <button
@@ -413,7 +420,6 @@ function DiscussionPage({ onBack, allSamples }) {
                   )}
                 </div>
               </div>
-              {/* ──────────────────────────────────────────────────────────── */}
             </>
           )}
         </div>
@@ -493,7 +499,9 @@ function AdminPage({ onBack }) {
                   {p.done} / {p.total} ({p.percent}%)
                 </span>
                 {(adminData.excluded_by_annotator?.[a] || 0) > 0 && (
-                  <span style={{ fontSize: 11, color: '#6b7280' }}>🚫 {adminData.excluded_by_annotator[a]}개 제외</span>
+                  <span style={{ fontSize: 11, color: '#6b7280' }}>
+                    🚫 {adminData.excluded_by_annotator[a]}개 제외 포함
+                  </span>
                 )}
               </div>
             );
@@ -510,7 +518,7 @@ function AdminPage({ onBack }) {
               }}
             >
               🚫 제외된 샘플 (1명 이상 제외): <strong>{adminData.excluded_sample_count}개</strong>
-              <span style={{ marginLeft: 6, color: '#9ca3af' }}></span>
+              <span style={{ marginLeft: 6, color: '#9ca3af' }}>(진행률에 포함, 최종 데이터셋에서는 제외)</span>
             </div>
           )}
 
@@ -788,15 +796,10 @@ function App() {
         axios.get(`${BASE_URL}/submitted_ids?annotator=${ann}&category=ALL`),
         axios.get(`${BASE_URL}/excluded_ids?annotator=${ann}&category=ALL`),
       ]);
-
       const submittedIndices = new Set(submittedRes.data.submitted_indices);
       const excludedIndices = new Set(excludedRes.data.excluded_indices);
-
-      const submittedIds = new Set(samplesSnapshot.filter((_, i) => submittedIndices.has(i)).map((s) => s.sample_id));
-      const excludedIds = new Set(samplesSnapshot.filter((_, i) => excludedIndices.has(i)).map((s) => s.sample_id));
-
-      setSubmittedSampleIds(submittedIds);
-      setExcludedSampleIds(excludedIds);
+      setSubmittedSampleIds(new Set(samplesSnapshot.filter((_, i) => submittedIndices.has(i)).map((s) => s.sample_id)));
+      setExcludedSampleIds(new Set(samplesSnapshot.filter((_, i) => excludedIndices.has(i)).map((s) => s.sample_id)));
     } catch {
       setSubmittedSampleIds(new Set());
       setExcludedSampleIds(new Set());
@@ -815,7 +818,6 @@ function App() {
           params: { sample_id: sampleData.sample_id, annotator: a, round_num: 1 },
         });
         const { is_correct, final_label } = res.data;
-
         if (is_correct === null || is_correct === undefined) {
           resetState();
         } else if (is_correct === true) {
@@ -868,9 +870,7 @@ function App() {
   const fetchDiscussionCount = useCallback(async () => {
     try {
       const res = await axios.get(`${BASE_URL}/discussion_samples`);
-      // unresolved 카운트
-      const unresolved = (res.data.samples || []).filter((s) => !s.resolved).length;
-      setDiscussionCount(unresolved);
+      setDiscussionCount((res.data.samples || []).filter((s) => !s.resolved).length);
     } catch {}
   }, []);
 
@@ -878,13 +878,9 @@ function App() {
     const saved = localStorage.getItem('annotator');
     fetchClassification();
     fetchDiscussionCount();
-
     fetchAllSamples().then((samples) => {
-      if (saved) {
-        buildAnnotatorSets(saved, samples);
-      }
+      if (saved) buildAnnotatorSets(saved, samples);
     });
-
     if (saved) {
       fetchProgress(saved, 'ALL');
       axios.get(`${BASE_URL}/last_index?annotator=${saved}&category=ALL`).then((res) => {
@@ -946,17 +942,14 @@ function App() {
         final_label: isCorrect === false ? label : null,
         round: 1,
       });
-
       setSubmittedSampleIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.add(sample.sample_id);
-        return newSet;
+        const s = new Set(prev);
+        s.add(sample.sample_id);
+        return s;
       });
-
       fetchProgress(annotator, category);
       fetchClassification();
       fetchDiscussionCount();
-
       if (currentStep < total) {
         await nextSample();
       } else {
@@ -989,9 +982,9 @@ function App() {
     try {
       await axios.post(`${BASE_URL}/exclude`, { sample_id: sample.sample_id, annotator });
       setExcludedSampleIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.add(sample.sample_id);
-        return newSet;
+        const s = new Set(prev);
+        s.add(sample.sample_id);
+        return s;
       });
       fetchProgress(annotator, category);
       fetchClassification();
