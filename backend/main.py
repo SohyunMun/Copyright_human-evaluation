@@ -255,9 +255,13 @@ def _build_iaa_data(conn):
             continue
         effective_label = label if label else predicted_map.get(sample_id)
         if effective_label in ("F", "C", "M"):
-            label_dict[sample_id].append((annotator, effective_label))
+            # ← q1을 세 번째 원소로 포함 (3-tuple)
+            label_dict[sample_id].append((annotator, effective_label, q1))
 
-    return {sid: items for sid, items in label_dict.items() if len(set(a for a, _ in items)) >= 3}
+    return {
+        sid: items for sid, items in label_dict.items()
+        if len(set(a for a, _, _ in items)) >= 3
+    }
 
 
 def _compute_all_iaa(conn):
@@ -268,7 +272,7 @@ def _compute_all_iaa(conn):
             fleiss_input = [
                 {"sample_id": sid, "label": label}
                 for sid, items in label_filtered.items()
-                for _, label in items
+                for _, label, _ in items   # ← 3-tuple 언팩
             ]
             result["fleiss_kappa"] = compute_fleiss_kappa(fleiss_input)
             result["alpha_label"] = compute_krippendorff_alpha_label(label_filtered)
